@@ -865,13 +865,6 @@
 
     /* --- 3.3 镜头 --- */
     var m = Engine.getMapSize();
-    Camera.setPointsProvider(function () {
-      var map = Engine.getMapSize();
-      return landmarks.filter(function (lm) { return lm.kind === "field"; }).map(function (lm) {
-        return { x: lm.nx * map.w, y: lm.ny * map.h };
-      });
-    });
-
     Camera.init({
       w: window.innerWidth,
       h: window.innerHeight,
@@ -880,6 +873,10 @@
       onChange: syncWorld
     });
     cameraReady = true;
+
+    Camera.setPointsProvider(function () {
+      return landmarks.map(function (lm) { return { x: lm.wx, y: lm.wy }; });
+    });
 
     /* 桌面端覆盖层占右侧 --overlay-w，聚焦时把地标推到可见地图区的中心 */
     Camera.setFocusOffsetProvider(function () {
