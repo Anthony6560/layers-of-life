@@ -115,6 +115,7 @@
 .m-landmark[data-field="field"]  { --fc: var(--color-field);  --fcd: var(--color-field-dark); }
 .m-landmark[data-field="about"]  { --fc: var(--color-ink-3);  --fcd: var(--color-ink-1); }
 .m-landmark[data-field="notes"]  { --fc: var(--color-ink-3);  --fcd: var(--color-ink-1); }
+.m-landmark[data-field="echo"]   { --fc: var(--color-ink-3);  --fcd: var(--color-accent); }
 
 /* 镜头聚焦时，其余地标退让（05 §7.3 步 2：opacity 1 → 0.25，200ms）*/
 .m-landmark[data-dim="1"] { opacity: .25; }

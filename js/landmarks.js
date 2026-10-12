@@ -39,7 +39,8 @@
     taste:  { artToken: "--mark-art-taste",  hitToken: "--mark-hit-abc", shape: "swirl"    },
     field:  { artToken: "--mark-art-field",  hitToken: "--mark-hit-abc", shape: "sector"   },
     about:  { artToken: "--mark-art-about",  hitToken: "--mark-hit-de",  shape: "cross"    },
-    notes:  { artToken: "--mark-art-notes",  hitToken: "--mark-hit-de",  shape: "tally"    }
+    notes:  { artToken: "--mark-art-notes",  hitToken: "--mark-hit-de",  shape: "tally"    },
+    echo:   { artToken: "--mark-art-echo",   hitToken: "--mark-hit-de",  shape: "echo"     }
   };
 
   /* `metaphor`（数据字段）→ `shape`（图形语言），二者一一对应。
@@ -149,6 +150,24 @@
         shape: MARK_META.notes.shape,
         artToken: MARK_META.notes.artToken,
         hitToken: MARK_META.notes.hitToken
+      });
+    }
+
+    /* 回声 ECHO —— 五座山之间的中央盆地，访客留言的入口 */
+    var echo = (site && site.echoLandmark) || {};
+    if (echo && (echo.landmark || echo.name)) {
+      var ePos = pickPos(echo, 0.5, 0.5);
+      add({
+        id: "echo", kind: "neutral",
+        badge: str(echo.landmark),
+        name: str(echo.name) || "回声",
+        nameEn: str(echo.nameEn),
+        subtitle: str(echo.subtitle),
+        intro: str(echo.intro),
+        gx: ePos.x, gy: ePos.y,
+        shape: MARK_META.echo.shape,
+        artToken: MARK_META.echo.artToken,
+        hitToken: MARK_META.echo.hitToken
       });
     }
 

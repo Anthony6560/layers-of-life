@@ -6,7 +6,7 @@
   <title>坐标之外 · Layers of Life</title>
   <script>
     // Suppress the introduction before the first paint on a valid inner-page URL.
-    if (/^#\/field\/(space|light|rhythm|taste|field)$/.test(location.hash)) {
+    if (/^#\/field\/(space|light|rhythm|taste|field|echo)$/.test(location.hash)) {
       document.documentElement.classList.add('m-skip-intro');
     }
   </script>
@@ -177,9 +177,11 @@
 <script src="assets/data/chengnan.checkup.data.js?v=20261012-media-paths"></script>
 <script src="assets/data/convenience-store.data.js?v=20261007-observed-slices"></script>
 <script src="assets/data/convenience-research.data.js?v=20261007-research-narrative"></script>
+<script src="assets/data/guestbook.data.js?v=20261012-echo"></script>
 
 <!-- 2. 工具层：Agent D 提供 -->
 <script src="js/placeholder.js?v=20261003-smooth-cache"></script>
+<script src="js/guestbook.js?v=20261012-echo"></script>
 
 <!-- 3. 内容模块：Agent D 提供，必须先于 app.js -->
 <script src="js/content-module.js?v=20261012-text-back"></script>

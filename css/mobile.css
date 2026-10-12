@@ -41,7 +41,8 @@
   #overlay[data-state="open"] #overlay-content .c-head,
   #overlay[data-state="open"] #overlay-content .c-space-entry__copy,
   #overlay[data-state="open"] #overlay-content .c-panel,
-  #overlay[data-state="open"] #overlay-content .c-segmented { pointer-events: auto; }
+  #overlay[data-state="open"] #overlay-content .c-segmented,
+  #overlay[data-state="open"] #overlay-content .c-echo { pointer-events: auto; }
   .c-root[data-shell="external"] { --c-block-pad: 14px; }
   .c-root[data-shell="external"] .c-head { margin-bottom: 16px; }
   .c-root[data-shell="external"] .c-view .c-head__title { font-size: 42px; }

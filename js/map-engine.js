@@ -181,7 +181,8 @@
         taste:  num("--mark-art-taste", 88),
         field:  num("--mark-art-field", 96),
         about:  num("--mark-art-about", 48),
-        notes:  num("--mark-art-notes", 40)
+        notes:  num("--mark-art-notes", 40),
+        echo:   num("--mark-art-echo", 56)
       },
       markHit: {
         space:  num("--mark-hit-abc", 104),
@@ -190,7 +191,8 @@
         taste:  num("--mark-hit-abc", 104),
         field:  num("--mark-hit-abc", 104),
         about:  num("--mark-hit-de", 64),
-        notes:  num("--mark-hit-de", 64)
+        notes:  num("--mark-hit-de", 64),
+        echo:   num("--mark-hit-de", 64)
       }
     };
 
@@ -390,9 +392,20 @@
     return out;
   }
 
+  /* ⑧ 回声 ECHO —— 三道向外扩散的等距波纹，呼应地形等高线 */
+  function markEcho() {
+    var out = '';
+    [[20, .30, 1], [31, .50, 1.2], [43, .72, 1.4]].forEach(function (row) {
+      out += '<path d="M ' + (50 - row[0] * .68).toFixed(2) + ' 50 A ' + row[0] + ' ' + row[0] +
+        ' 0 0 1 ' + (50 + row[0] * .68).toFixed(2) + ' 50" fill="none" stroke="currentColor" ' +
+        'stroke-width="' + row[2] + '" stroke-linecap="round" opacity="' + row[1] + '"/>';
+    });
+    return out + '<circle cx="50" cy="50" r="2.3" fill="currentColor" opacity=".82"/>';
+  }
+
   /**
    * 构建地标图形的 SVG 内容。
-   * @param {string} shape - 'contour'|'aperture'|'wave'|'swirl'|'sector'|'cross'|'tally'
+   * @param {string} shape - 'contour'|'aperture'|'wave'|'swirl'|'sector'|'cross'|'tally'|'echo'
    * @param {Object} [opts] - { rotate: number } 扇形朝向
    * @returns {string} viewBox="0 0 100 100" 的 SVG 内联内容
    */
@@ -406,6 +419,7 @@
       case "sector":   return markField(rotate);
       case "cross":    return markAbout();
       case "tally":    return markNotes();
+      case "echo":     return markEcho();
       default:         return markAbout();
     }
   }

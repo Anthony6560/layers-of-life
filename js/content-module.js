@@ -20,6 +20,7 @@
 
   var VIEW_ABOUT = 'about';
   var VIEW_NOTES = 'notes';
+  var VIEW_ECHO = 'echo';
 
   var FIELD_IDS = ['space', 'light', 'rhythm', 'taste', 'field'];
 
@@ -517,12 +518,27 @@
     return h + '</div>';
   }
 
+  /** 回声：公开留言簿的内容壳，数据读写由 Guestbook 模块负责 */
+  function echoViewHTML() {
+    var landmark = state.ctx.site && state.ctx.site.echoLandmark;
+    var title = landmark && str(landmark.name) ? str(landmark.name) : '回声';
+    var nameEn = landmark && str(landmark.nameEn) ? str(landmark.nameEn) : 'ECHO';
+    var intro = landmark && str(landmark.subtitle) ? str(landmark.subtitle) : '留下你经过这里时，想说的一句话。';
+    var h = '<div class="c-view" data-view="echo">';
+    h += '<header class="c-head"><p class="c-head__eyebrow">' + esc(nameEn) + '</p>';
+    h += '<h2 class="c-head__title" id="c-overlay-title">' + esc(title) + '</h2>';
+    h += '<p class="c-head__intro">' + esc(intro) + '</p></header>';
+    h += '<div data-guestbook-mount></div></div>';
+    return h;
+  }
+
   /** 内容区（不含顶栏），供分段切换时整块重渲染 */
   function viewHTML() {
     var ctx = state.ctx;
     if (!ctx || !ctx.site) return errorHTML();
     if (ctx.id === VIEW_ABOUT) return aboutViewHTML();
     if (ctx.id === VIEW_NOTES) return notesViewHTML();
+    if (ctx.id === VIEW_ECHO) return echoViewHTML();
 
     var field = findField(ctx.site, ctx.id);
     if (!field) {
@@ -725,7 +741,8 @@
     var root = doc.createElement('div');
     root.className = 'c-root';
     root.setAttribute('data-view', state.ctx.id === VIEW_ABOUT ? VIEW_ABOUT
-      : state.ctx.id === VIEW_NOTES ? VIEW_NOTES : 'field');
+      : state.ctx.id === VIEW_NOTES ? VIEW_NOTES
+      : state.ctx.id === VIEW_ECHO ? VIEW_ECHO : 'field');
     if (FIELD_IDS.indexOf(state.ctx.id) >= 0) root.setAttribute('data-field', state.ctx.id);
     root.setAttribute('data-mode', state.mode);
     /* self：自带顶栏 + 自带内边距/滚动；external：骨架由 Agent C 提供，本模块只填内容 */
@@ -745,6 +762,10 @@
     state.root = root;
     if (typeof container.appendChild === 'function') container.appendChild(root);
 
+    if (state.ctx.id === VIEW_ECHO && global.Guestbook && typeof global.Guestbook.mount === 'function') {
+      global.Guestbook.mount(root.querySelector('[data-guestbook-mount]'));
+    }
+
     /* 感知性能降级（契约 §2.2 / §2.4），Scene 未就位时静默跳过 */
     var S = global.Scene;
     if (S && typeof S.on === 'function') {
@@ -758,6 +779,9 @@
 
   /** 卸载并清理（移除监听器、清空容器） */
   function unmount() {
+    if (state.ctx && state.ctx.id === VIEW_ECHO && global.Guestbook && typeof global.Guestbook.unmount === 'function') {
+      global.Guestbook.unmount();
+    }
     if (typeof state.unsub === 'function') {
       try { state.unsub(); } catch (e) { /* 忽略 */ }
     }

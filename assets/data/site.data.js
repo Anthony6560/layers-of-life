@@ -107,6 +107,14 @@ window.SITE_DATA = {
     }
   ],
 
+  "echoLandmark": {
+    "landmark": "∿",
+    "name": "回声",
+    "nameEn": "ECHO",
+    "subtitle": "留下你经过这里时，想说的一句话。",
+    "position": { "x": 0.50, "y": 0.50 }
+  },
+
   "environment": {
     "_说明": "环境层不调用外部服务。太阳位置由经纬度和设备时间计算；mood/weather 预留给后续数据源。",
     "location": {

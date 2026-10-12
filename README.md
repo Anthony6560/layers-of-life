@@ -59,6 +59,7 @@ assets/
     field/                 棒垒球与挂件媒体
     moments/               分类后的生活图文媒体
 docs/deployment.md         GitHub Pages 与域名配置
+docs/guestbook-supabase.md 回声留言簿的数据库配置
 THIRD_PARTY_NOTICES.md     第三方库与素材使用说明
 CNAME                      自定义域名
 .nojekyll                  禁用 Jekyll 处理
@@ -71,6 +72,8 @@ CNAME                      自定义域名
 本仓库包含网站源码与上线所需的运行资源。原始 GIS、CAD、报告、朋友圈导出文件和离线处理工具不随仓库发布，因此这里不包含完整的数据生产流程。
 
 站点通过 GitHub Pages 从 `main` 分支根目录发布。域名和部署步骤见 [部署说明](docs/deployment.md)。
+
+中央盆地的“回声”是游客留言入口。留言簿使用独立的 Supabase 数据库，配置方法见 [留言簿配置](docs/guestbook-supabase.md)；没有配置数据库时，入口仍会正常显示，但提交按钮会保持关闭。
 
 ## 使用与授权
 
