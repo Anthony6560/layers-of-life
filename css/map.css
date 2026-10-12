@@ -1,0 +1,658 @@
+@charset "UTF-8";
+/* ============================================================================
+   map.css —— 地图层、地标、标注、缩放控件、比例尺、覆盖层外壳、全局提示
+   ----------------------------------------------------------------------------
+   依据《05-UI设计规范》§5.2–5.6（地图视觉语言）、§6.3–6.6（组件）、
+   §7（动效）、§8.1（断点）、§9.2–9.5（无障碍）、§10.4（错误卡片）。
+   类名前缀一律 m-（契约 §3.2）。
+   ⚠️ 规范 §6 给出的 .zoom-ctrl / .scale-bar / .overlay / .btn-back 等无前缀类名，
+      与契约 §3.2 的 m- 前缀规则冲突；此处以**契约**为准，改用 m- 前缀，
+      语义一一对应：
+        .overlay    → #overlay / .m-overlay__bar
+        .btn-back   → .m-back
+        .zoom-ctrl  → .m-zoom
+        .scale-bar  → .m-scale
+   ============================================================================ */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   1 —— 舞台（L0 纸张底纹在 body 上，这里只放画布与地标层）
+   ══════════════════════════════════════════════════════════════════════════ */
+
+#app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* canvas 本身**不填底色** —— 让 body 的纸张纹透上来。
+   这样"纸不动、墨在动"，正是纸质地图的行为。 */
+#map-canvas {
+  position: fixed;
+  inset: 0;
+  display: block;
+  z-index: var(--z-contour);
+  touch-action: manipulation;      /* 仅保留地标点击，不接管拖拽与捏合 */
+}
+
+/* 晨昏线视觉层：太阳方位决定渐变方向，只在太阳高度 −6°…+6° 时显现。 */
+.m-day-night-layer {
+  position: fixed;
+  inset: -12%;
+  z-index: 15;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(1.04);
+  background: linear-gradient(var(--twilight-angle, 90deg),
+    rgba(10, 18, 23, .52) 0%,
+    rgba(20, 30, 29, .36) 35%,
+    rgba(167, 113, 59, .16) 48%,
+    rgba(247, 250, 239, 0) 64%);
+  filter: blur(18px);
+  mix-blend-mode: multiply;
+  transition: opacity 900ms var(--ease-standard);
+}
+:root.m-theme-twilight .m-day-night-layer {
+  opacity: calc(.28 + var(--twilight-strength, 0) * .62);
+}
+
+/* L2 视差层：承载地标图形 + 标注的鼠标视差（同向 ±14px）
+   视差位移由 JS 写入 transform，因此不能用 CSS 过渡去覆盖它。 */
+#landmark-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-landmark);
+  pointer-events: none;            /* 空白处不拦截地图拖拽 */
+  will-change: transform;
+}
+
+/* 承载地图的平移 / 缩放（与 canvas 使用同一套 view 参数）*/
+#map-world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  transform-origin: 0 0;
+  --inv: 1;                        /* 缩放倒数：用于抵消标注的字号缩放 */
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2 —— 地标（05 §5.4 三种图形语言 / §5.5 标注 / §7.2 A-01 A-04）
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.m-landmark {
+  position: absolute;
+  /* ⚠️ v2.1：世界坐标写进 **transform**（translate3d），不再用 --wx/--wy。
+     自由旋转后投影随视角变化，位置必须逐帧刷新；写 transform（只走合成层）
+     而不是 left/top，是为了不触发重排 —— 05 §7.5 禁令。
+     写入方：app.js 的 layoutLandmarks()（初次布局 / 窗口尺寸变化）与
+     map-engine 的 syncLandmarks()（每帧）。 */
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--fc, var(--color-ink-3));
+  pointer-events: auto;            /* 父层是 none，这里必须重新打开 */
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 200ms var(--ease-standard), color var(--dur-landmark-in) var(--ease-decelerate);
+
+}
+
+/* 三个场使用各自的识别色；D 关于 / E 印记用中性墨色
+   （规范 §5.4④：它们不参与识别色体系，以免破坏"三个场"的三角结构） */
+.m-landmark[data-field="space"]  { --fc: var(--color-space);  --fcd: var(--color-space-dark); }
+.m-landmark[data-field="light"]  { --fc: var(--color-light);  --fcd: var(--color-light-dark); }
+.m-landmark[data-field="rhythm"] { --fc: var(--color-rhythm); --fcd: var(--color-rhythm-dark); }
+.m-landmark[data-field="taste"]  { --fc: var(--color-taste);  --fcd: var(--color-taste-dark); }
+.m-landmark[data-field="field"]  { --fc: var(--color-field);  --fcd: var(--color-field-dark); }
+.m-landmark[data-field="about"]  { --fc: var(--color-ink-3);  --fcd: var(--color-ink-1); }
+.m-landmark[data-field="notes"]  { --fc: var(--color-ink-3);  --fcd: var(--color-ink-1); }
+
+/* 镜头聚焦时，其余地标退让（05 §7.3 步 2：opacity 1 → 0.25，200ms）*/
+.m-landmark[data-dim="1"] { opacity: .25; }
+
+/* Text buttons sit directly on the projected peak. Counter-scale the entire
+   hit area so the type and click target stay the same size during camera zoom. */
+.m-landmark__hit {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: max-content;
+  min-width: 72px;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%) scale(var(--inv, 1));
+  transform-origin: center;
+  border-radius: var(--radius-sm);
+}
+.m-landmark:focus-visible { outline: none; }
+.m-landmark:focus-visible .m-landmark__hit {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+/* ---- L3 标注（05 §5.5）---- */
+.m-landmark__label {
+  position: relative;
+  display: block;
+  pointer-events: none;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.m-landmark__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Keep the original letter seal and typography; only the icon is removed. */
+.m-landmark__badge {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-latin);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wide);
+  line-height: 1;
+  color: var(--color-paper-1);
+  background: var(--color-accent);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-seal);
+}
+.m-landmark[data-field="about"] .m-landmark__badge,
+.m-landmark[data-field="notes"] .m-landmark__badge {
+  background: none;
+  color: var(--color-ink-3);
+  box-shadow: none;
+}
+
+.m-landmark__cn {
+  font-family: var(--font-display);
+  font-size: var(--text-md);        /* 18px */
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-ink-1);
+  transition: color var(--dur-landmark-in) var(--ease-standard);
+}
+.m-landmark:hover .m-landmark__cn { color: var(--fcd, var(--color-ink-1)); }
+
+/* Secondary text follows the original styling below the peak-centred row. */
+.m-landmark__en {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + var(--space-1));
+  transform: translateX(-50%);
+  font-family: var(--font-latin);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-ink-3);
+}
+.m-landmark__sub {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + var(--space-6));
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-ink-3);
+  max-width: 14em;
+  opacity: 0;
+  transform: translate(-50%, 2px);
+  transition: opacity 200ms var(--ease-decelerate), transform 200ms var(--ease-decelerate);
+}
+.m-landmark:hover .m-landmark__sub,
+.m-landmark:focus-visible .m-landmark__sub { opacity: 1; transform: translateX(-50%); }
+#landmark-layer[data-z="far"] .m-landmark__en,
+#landmark-layer[data-z="far"] .m-landmark__sub { display: none; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   3 —— L4 控件层：引导文案 / 缩放控件 / 比例尺 / 图廓坐标 / 签名
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ---- 首屏引导文案（左上角，S-05 五秒自明）---- */
+#hero-caption {
+  position: fixed;
+  left: var(--space-12);
+  top: var(--space-12);
+  z-index: var(--z-control);
+  max-width: 22em;
+  pointer-events: none;            /* 不拦截地图拖拽 */
+  transition: opacity var(--dur-overlay-in) var(--ease-standard);
+}
+body.m-overlay-open #hero-caption { opacity: 0; }
+
+.m-hero__rule {
+  width: 32px;
+  height: var(--space-px);
+  background: var(--color-accent);
+  margin-bottom: var(--space-4);
+}
+.m-hero__title {
+  margin-bottom: var(--space-3);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);      /* 32px */
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-ink-1);
+}
+.m-hero__sub {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-ink-3);
+}
+/* 引导小字（数据驱动：site.data.js 的 hero.hint）*/
+.m-hero__hint {
+  margin-top: var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-ink-4);       /* 非正文的小字，且 ≥18.66px 不成立 —— 仅作提示 */
+}
+
+/* ---- 缩放控件（右下，线稿风格，默认 55% 透明）---- */
+.m-zoom {
+  position: fixed;
+  right: var(--space-8);
+  bottom: var(--space-20);
+  z-index: var(--z-control);
+  display: flex;
+  flex-direction: column;
+  border: var(--space-px) solid var(--color-ink-faint);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-paper-1);
+  opacity: .55;
+  transition: opacity 200ms var(--ease-standard);
+}
+.m-zoom:hover, .m-zoom:focus-within { opacity: 1; }
+
+.m-zoom__btn {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  line-height: 1;
+  color: var(--color-ink-2);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  transition: background-color var(--dur-landmark-in) var(--ease-standard),
+              color var(--dur-landmark-in) var(--ease-standard);
+}
+.m-zoom__btn + .m-zoom__btn { border-top: var(--space-px) solid var(--color-rule-soft); }
+.m-zoom__btn:hover { background: var(--color-paper-2); color: var(--color-ink-1); }
+/* 容器 overflow:hidden，焦点环必须内缩，否则会被裁掉（§6.5）*/
+.m-zoom__btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+/* 达到缩放上下限：禁用而**不隐藏**（隐藏会让控件跳动，§6.5）*/
+.m-zoom__btn:disabled { color: var(--color-ink-faint); cursor: not-allowed; background: none; }
+.m-zoom__btn--fit { font-size: var(--text-sm); }
+
+/* ---- 临时时间 / 时区实验台 ---- */
+.m-time-control {
+  position: fixed;
+  right: var(--space-12);
+  top: 84px;
+  z-index: var(--z-control);
+  width: 270px;
+  display: grid;
+  grid-template-columns: 1fr 108px;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--space-px) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-paper-1) 88%, transparent);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text-secondary);
+  opacity: .72;
+  transition: opacity 200ms var(--ease-standard), background-color 700ms var(--ease-standard);
+}
+.m-time-control:hover, .m-time-control:focus-within { opacity: 1; }
+@media (min-width: 768px) {
+  body.m-overlay-open .m-time-control { left: var(--space-6); right: auto; top: var(--space-6); }
+}
+@media (max-width: 767px) {
+  body.m-overlay-open .m-time-control { visibility: hidden; }
+}
+.m-time-control__clock,
+.m-time-control__sun {
+  grid-column: 1 / -1;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  line-height: var(--leading-normal);
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: var(--tracking-wide);
+}
+.m-time-control__clock { color: var(--color-text); }
+.m-time-control__sun { color: var(--color-text-muted); }
+.m-time-control__datetime,
+.m-time-control__zone {
+  min-width: 0;
+  height: 30px;
+  padding: 0 var(--space-2);
+  border: var(--space-px) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-raised);
+  color: var(--color-text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+}
+.m-time-control__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: var(--space-2);
+}
+.m-time-control__btn {
+  flex: 1;
+  min-height: 30px;
+  border: var(--space-px) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-sunken);
+  color: var(--color-text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+}
+.m-time-control__btn:hover { color: var(--color-text); background: var(--color-bg-deep); }
+
+/* ---- 比例尺（左下，测绘图纸样式）----
+   P-2 硬要求：刻度值必须真实响应缩放，否则它就是一个装饰贴纸。
+   映射：scale = 1.0 时，96px = 500 m（§6.6）。 */
+.m-scale {
+  position: fixed;
+  left: var(--space-8);
+  bottom: var(--space-8);
+  z-index: var(--z-control);
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  opacity: .55;
+  transition: opacity 200ms var(--ease-standard);
+  pointer-events: none;
+}
+.m-scale:hover { opacity: 1; }
+.m-scale__bar {
+  display: flex;
+  height: 8px;
+  border: var(--space-px) solid var(--color-ink-faint);
+}
+.m-scale__seg { width: 24px; height: 100%; }
+.m-scale__seg:nth-child(odd)  { background: var(--color-ink-3); }   /* 不用 ink-1 */
+.m-scale__seg:nth-child(even) { background: var(--color-paper-1); }
+.m-scale__label {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-ink-3);
+  white-space: nowrap;
+}
+
+/* ---- 右上角图廓坐标标注（装饰性，锚定"这是一张地图"的认知）---- */
+.m-graticule-tag {
+  position: fixed;
+  right: var(--space-12);
+  top: var(--space-12);
+  z-index: var(--z-control);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-ink-4);
+  text-align: right;
+  line-height: var(--leading-normal);
+  pointer-events: none;
+  transition: opacity var(--dur-overlay-in) var(--ease-standard);
+}
+body.m-overlay-open .m-graticule-tag { opacity: 0; }
+
+/* ---- 页脚签名（右下，手写体。取自 site.data.js 的 meta.signature）---- */
+.m-sign {
+  position: fixed;
+  right: var(--space-8);
+  bottom: var(--space-8);
+  z-index: var(--z-control);
+  font-family: var(--font-signature);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-ink-4);
+  pointer-events: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   4 —— L5 覆盖层（05 §6.3）
+   透明外壳，仅文字矩形承接内容，不使用动态 backdrop-filter。
+   ══════════════════════════════════════════════════════════════════════════ */
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  isolation: isolate;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: opacity var(--dur-overlay-out) var(--ease-accelerate),
+              transform var(--dur-overlay-out) var(--ease-accelerate);
+}
+#overlay[data-state="open"] {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  /* 打开：280ms ease-out（契约 §6） */
+  transition: opacity var(--dur-overlay-in) ease-out,
+              transform var(--dur-overlay-in) ease-out;
+}
+
+/* 保留对话框读屏名称，不再显示重复的微型标题。 */
+.m-overlay__title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* 内容区：Agent D 挂载到这里 */
+#overlay-content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
+  padding: clamp(32px, 8vh, 80px) var(--space-12) var(--space-12) var(--space-8);
+  /* 未指定场时的兜底识别色，保证 Agent D 取到的 --field-color 永不为空 */
+  --field-color: var(--color-ink-3);
+}
+
+/* 视觉契约（契约 §5）：三个"场"的识别色通过 CSS 变量传递，
+   Agent D 内部一律使用 var(--field-color)，不得写死具体颜色。 */
+#overlay-content[data-field="space"]  { --field-color: var(--color-space); }
+#overlay-content[data-field="light"]  { --field-color: var(--color-light); }
+#overlay-content[data-field="rhythm"] { --field-color: var(--color-rhythm); }
+#overlay-content[data-field="taste"]  { --field-color: var(--color-taste); }
+#overlay-content[data-field="field"]  { --field-color: var(--color-field); }
+
+/* 滚动条（§6.3）：宽 6px；轨道 paper-2；滑块 paper-4 */
+#overlay-content::-webkit-scrollbar { width: 6px; }
+#overlay-content::-webkit-scrollbar-track { background: transparent; }
+#overlay-content::-webkit-scrollbar-thumb {
+  background: var(--color-paper-4);
+  border-radius: var(--radius-md);
+}
+#overlay-content { scrollbar-width: thin; scrollbar-color: var(--color-paper-4) transparent; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   5 —— L6 全局提示（05 §10.4 数据加载失败 / §7.2 A-16 降级提示条）
+   ⚠️ 数据全丢时**地图本身必须仍然可见** —— 这保证了视觉作品感仍在。
+   ══════════════════════════════════════════════════════════════════════════ */
+
+#global-message {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-toast);
+  display: grid;
+  place-items: center;
+  pointer-events: none;            /* 只有卡片本身可交互 */
+}
+#global-message:empty { display: none; }
+
+/* ---- 数据错误卡片 ---- */
+.m-error-card {
+  pointer-events: auto;
+  width: min(var(--measure), calc(100% - var(--space-8)));
+  padding: var(--space-10);
+  background: var(--color-paper-0);
+  border: var(--space-px) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  text-align: left;
+}
+.m-error-card__title {
+  margin-bottom: var(--space-4);
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-error);       /* 7.11:1 ✅ AAA */
+}
+.m-error-card__body {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-ink-2);
+  margin-bottom: var(--space-6);
+}
+.m-error-card__hint {
+  margin-top: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--color-ink-3);
+}
+.m-error-card__btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: var(--space-3) var(--space-5);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-ink-2);
+  background: var(--color-paper-1);
+  border: var(--space-px) solid var(--color-ink-faint);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: color var(--dur-landmark-in) ease-out,
+              border-color var(--dur-landmark-in) ease-out;
+}
+.m-error-card__btn:hover { color: var(--color-accent); border-color: var(--color-accent); }
+
+/* ---- A-16 降级提示条（顶部滑入，停留后自动滑出）---- */
+.m-toast {
+  pointer-events: auto;
+  position: fixed;
+  left: 50%;
+  top: var(--space-6);
+  transform: translate(-50%, -200%);
+  max-width: calc(100% - var(--space-8));
+  padding: var(--space-3) var(--space-5);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-ink-2);
+  background: var(--color-paper-0);
+  border: var(--space-px) solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  transition: transform var(--dur-toast-out) var(--ease-accelerate);
+}
+.m-toast[data-state="in"] {
+  transform: translate(-50%, 0);
+  transition: transform var(--dur-toast-in) var(--ease-decelerate);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6 —— 响应式（05 §8.1 断点对照表）
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ---- 平板 768–1199px ---- */
+@media (min-width: 768px) and (max-width: 1199px) {
+  #overlay { width: 50%; right: 0; left: auto; }
+  #overlay[data-state="open"] { box-shadow: var(--overlay-shadow); }
+  #hero-caption { left: var(--space-8); top: var(--space-8); }
+  .m-hero__title { font-size: var(--text-xl); }
+  #overlay-content { padding: var(--space-10) var(--space-6) var(--space-12) var(--space-4); }
+}
+
+/* ---- 桌面 ≥1200px：右侧贴边，左侧保留地图可见（M-08）---- */
+@media (min-width: 1200px) {
+  #overlay { width: min(50vw, var(--overlay-w)); left: auto; right: 0; }
+  #overlay[data-state="open"] { box-shadow: var(--overlay-shadow); }
+}
+
+/* ---- 移动 <768px ---- */
+@media (max-width: 767px) {
+  #hero-caption { left: var(--space-5); top: var(--space-5); max-width: 16em; }
+  .m-hero__title { font-size: var(--text-lg); }
+
+  /* Preserve the text hit area on small screens, with a quieter type size. */
+  .m-landmark__cn { font-size: var(--text-sm); }
+  .m-landmark__badge { width: 14px; height: 14px; font-size: var(--text-2xs); }
+  .m-landmark__en,
+  .m-landmark__sub { display: none; }
+
+  /* 比例尺在移动端隐藏（§6.6 / §8.1）—— 小屏上它只会挤占空间 */
+  .m-scale { display: none; }
+  .m-graticule-tag { display: none; }
+  .m-sign { display: none; }
+
+  .m-zoom { right: var(--space-4); bottom: var(--space-5); }
+  .m-zoom__btn { width: 44px; height: 44px; }   /* 触控热区 44px */
+  .m-time-control {
+    left: var(--space-4);
+    right: var(--space-4);
+    top: auto;
+    bottom: var(--space-5);
+    width: auto;
+    grid-template-columns: 1fr 104px;
+    padding: var(--space-2);
+  }
+
+  #overlay { width: 100%; top: 96px; }
+  #overlay[data-state="open"] { box-shadow: none; }
+  #overlay-content { padding: var(--space-5); }
+
+  .m-error-card { padding: var(--space-6); }
+}

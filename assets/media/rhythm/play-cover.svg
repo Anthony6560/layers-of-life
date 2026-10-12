@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <rect width="400" height="400" fill="#e3e9d3"/>
+  <g fill="none" stroke="#93a07d" stroke-width="1" opacity=".65">
+    <circle cx="290" cy="140" r="70"/><circle cx="290" cy="140" r="88"/>
+    <circle cx="290" cy="140" r="106"/><circle cx="290" cy="140" r="124"/>
+    <circle cx="290" cy="140" r="142"/><circle cx="290" cy="140" r="160"/>
+    <path d="M0 230 Q60 190 120 235 T240 220 T400 235 M0 245 Q60 205 120 250 T240 235 T400 250 M0 260 Q60 220 120 265 T240 250 T400 265"/>
+  </g>
+  <text x="36" y="350" font-family="Georgia,serif" font-size="52" fill="#3f4a35" letter-spacing="7">PLAY</text>
+</svg>

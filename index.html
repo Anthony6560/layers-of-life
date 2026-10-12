@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>坐标之外 · Layers of Life</title>
+
+  <!-- 样式：tokens 必须最先，其余顺序不限（契约 §3.4） -->
+  <link rel="stylesheet" href="css/tokens.css?v=20261007-green-panels">
+  <link rel="stylesheet" href="css/base.css?v=20261009-intro-axis-spacing">
+  <link rel="stylesheet" href="css/map.css?v=20261007-peak-original-labels">
+  <link rel="stylesheet" href="css/content.css?v=20261007-fit-panels">   <!-- Agent D -->
+  <link rel="stylesheet" href="css/space-city.css?v=20261008-render-recovery">
+  <link rel="stylesheet" href="css/city-checkup.css?v=20261007-checkup-4">
+  <link rel="stylesheet" href="css/time-cube.css?v=20261007-trends-hotspot-picking">
+  <link rel="stylesheet" href="css/rhythm.css?v=20261008-credits-type">
+  <link rel="stylesheet" href="css/field.css?v=20261011-story-drag-space">
+  <link rel="stylesheet" href="css/moments.css?v=20261011-natural-masonry">
+</head>
+<body>
+
+<div id="terrain-preloader" data-state="loading" role="dialog" aria-modal="true" aria-labelledby="intro-greeting">
+  <div class="m-preloader__inner">
+    <div class="m-intro__coordinates" aria-hidden="true">
+      <svg viewBox="0 0 1000 700" preserveAspectRatio="none" focusable="false">
+        <g class="m-intro__frame">
+          <path d="M38 95H850 M960 205V620 M145 40H905V545H175 M145 40L38 95 M850 95L905 40 M960 620L905 545" />
+        </g>
+        <g class="m-intro__axes">
+          <path d="M38 24V660H978 M38 660L8 606" />
+          <path d="M32 33L38 24L44 33 M969 654L978 660L969 666 M8 617L8 606L18 612" />
+          <circle cx="38" cy="660" r="3" />
+        </g>
+        <g class="m-intro__ticks">
+          <path d="M218 655V665 M398 655V665 M578 655V665 M758 655V665 M33 550H43 M33 440H43 M33 330H43 M33 220H43 M19 637L27 633" />
+        </g>
+      </svg>
+      <span class="m-intro__axis m-intro__axis--origin">O</span>
+      <span class="m-intro__axis m-intro__axis--x">X</span>
+      <span class="m-intro__axis m-intro__axis--y">Y</span>
+      <span class="m-intro__axis m-intro__axis--z">Z</span>
+    </div>
+    <span class="m-intro__name">坐标之外</span>
+    <div class="m-intro__copy">
+      <h1 id="intro-greeting" data-intro-line>你好，我是枕套！</h1>
+      <p data-intro-line>我们生活在一个三维的世界，习惯用坐标回答“我在哪儿”。但一个位置，远远不足以说明“我是谁”。我走过的路、在意的事、做过的尝试，以及那些难以命名的感受，都在坐标之外。</p>
+      <p data-intro-line>所以，我把这个网站做成了一张个人地图。五座山峰承载着我的不同兴趣，等高线随着地形缓缓变化，光影跟随时间流转。这里有我观察城市、探索时空的项目，也有音乐、影像和日常生活里的记录。</p>
+      <p data-intro-line>你可以从任何一座山峰开始，认识坐标之外的我。</p>
+    </div>
+    <div class="m-intro__footer">
+      <div class="m-intro__loading">
+        <span id="terrain-preloader-label" class="m-preloader__label" role="status">地图准备中</span>
+        <div class="m-preloader__track" aria-hidden="true"><i id="terrain-preloader-progress"></i></div>
+      </div>
+      <div class="m-intro__actions">
+        <button id="intro-show-all" class="m-intro__skip" type="button">显示全文</button>
+        <button id="intro-enter" class="m-intro__enter" type="button" disabled>进入地图 <span aria-hidden="true">↗</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     无 JS 兜底（05 §10.4）
+     这是一个"极简目录页"，不是"报错页"：沿用同一套 CSS 变量（纸底、宋体、
+     场的识别色竖线、编号徽章），视觉上仍然是一个完整的作品。
+     带 scripting 的浏览器完全不会渲染 <noscript> 的内容，因此它与地图层
+     可以共存于同一份 HTML。
+     ⚠️ 此处的地标名 / 副标题是静态 HTML —— 没有 JS 就读不到 site.data.js，
+        这是无 JS 档位无法回避的重复。修改 site.data.js 时请同步这一节。
+     ══════════════════════════════════════════════════════════════════════════ -->
+<noscript>
+  <style>#terrain-preloader { display: none; }</style>
+  <div class="m-noscript">
+    <header class="m-noscript__head">
+      <div class="m-noscript__rule"></div>
+      <h1 class="m-noscript__title">坐标之外</h1>
+      <p class="m-noscript__sub">Layers of Life —— 一张会随内容长高的地形图。开启 JavaScript 后，可点击地标进入不同场域。</p>
+    </header>
+
+    <ul>
+      <li class="m-noscript__item" data-field="space">
+        <span class="m-noscript__badge">A</span>
+        <span class="m-noscript__name">空间<span>SPACE</span></span>
+        <span class="m-noscript__desc">城市空间信息工程 · 课程、实习与科研</span>
+      </li>
+      <li class="m-noscript__item" data-field="light">
+        <span class="m-noscript__badge">B</span>
+        <span class="m-noscript__name">光影<span>LIGHT</span></span>
+        <span class="m-noscript__desc">摄影 · 视觉 —— 拍那些没人会停下来的角落。</span>
+      </li>
+      <li class="m-noscript__item" data-field="rhythm">
+        <span class="m-noscript__badge">C</span>
+        <span class="m-noscript__name">节奏<span>RHYTHM</span></span>
+        <span class="m-noscript__desc">音乐创作 · 未完待续的故事</span>
+      </li>
+      <li class="m-noscript__item" data-field="taste">
+        <span class="m-noscript__badge">D</span>
+        <span class="m-noscript__name">味道<span>TASTE</span></span>
+        <span class="m-noscript__desc">手工料理 · 味觉与嗅觉 —— 食材自己会说话，你得尝了才知道它现在到哪儿了。</span>
+      </li>
+      <li class="m-noscript__item" data-field="field">
+        <span class="m-noscript__badge">E</span>
+        <span class="m-noscript__name">场<span>FIELD</span></span>
+        <span class="m-noscript__desc">棒垒球 · 体感 —— 球还没到，先站到它要去的地方。</span>
+      </li>
+      <li class="m-noscript__item" data-field="about">
+        <span class="m-noscript__badge">G</span>
+        <span class="m-noscript__name">关于</span>
+        <span class="m-noscript__desc">五件事做到最后是同一个动作：先看清楚，再动手做出来。</span>
+      </li>
+      <li class="m-noscript__item" data-field="notes">
+        <span class="m-noscript__badge">F</span>
+        <span class="m-noscript__name">印记</span>
+        <span class="m-noscript__desc">碎片笔记的聚合流，按时间倒序。</span>
+      </li>
+    </ul>
+
+    <p class="m-noscript__foot">
+      这一页是网站的极简目录。作品与印记的完整内容需要 JavaScript 才能展开。
+      <span class="m-noscript__sign">—— 先看清楚，再动手做出来</span>
+    </p>
+  </div>
+</noscript>
+
+<a class="m-skip" href="#landmark-layer">跳到地图</a>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     DOM 骨架（契约 §3.1）
+     ⚠️ #map-controls / #hero-caption 的内容由 app.js 生成 ——
+        这样在"无 JS"档位下它们不会留下一堆点不动的死控件。
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- L0/L1 地图画布：纸张底纹之上绘制统一高度场与流动等高线。
+       Canvas 内容对辅助技术不可见，语义由 #landmark-layer 的按钮承载。 -->
+  <canvas id="map-canvas" aria-hidden="true"></canvas>
+
+  <!-- L2/L3 地标层：真实可聚焦的按钮，供键盘导航与无障碍 -->
+  <div id="landmark-layer" tabindex="-1">
+    <div id="map-world"></div>
+  </div>
+
+  <!-- L4 时间控件 / 比例尺 / 图廓坐标 / 签名 -->
+  <div id="map-controls"></div>
+
+  <!-- 左上角引导文案（文案来自 site.data.js 的 hero.*） -->
+  <div id="hero-caption"></div>
+
+  <!-- L5 覆盖层，初始隐藏。Agent D 只允许操作 #overlay-content 内部（契约 §3.1）。
+       #overlay-title 由 Agent C 提供，Agent D 请勿重复创建同 id 元素。 -->
+  <div id="overlay" data-state="closed" role="dialog" aria-modal="true" tabindex="-1"
+       aria-labelledby="overlay-title" aria-hidden="true">
+    <span class="m-overlay__title" id="overlay-title"></span>
+    <div id="overlay-content" data-field=""></div>
+  </div>
+
+  <!-- L6 错误 / 提示 -->
+  <div id="global-message" role="status" aria-live="polite"></div>
+
+  <!-- 顶层纸张颗粒：把 UI 与画布统一成同一张纸（装饰） -->
+  <div id="paper-grain" aria-hidden="true"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     脚本按序同步加载（契约 §3.4）
+     ⚠️ 全站**不使用** type="module"，**不使用** defer / async ——
+        普通 <script src> 是同步阻塞执行的，保证 app.js 运行时
+        三个 window.*_DATA 必然已就绪，无需处理异步竞态；
+        同时避开 file:// 下 ES Module 的 CORS 限制，
+        这是"双击 index.html 即可打开"（PRD M-06 / 契约 R-01）的成立前提。
+     ══════════════════════════════════════════════════════════════════════════ -->
+
+<!-- 1. 数据层：必须最先 -->
+<script src="assets/data/site.data.js?v=20261008-music-room"></script>
+<script src="assets/data/works.data.js?v=20261008-play-corrected"></script>
+<script src="assets/data/play.visuals.data.js?v=20261008-play-corrected"></script>
+<script src="assets/data/notes.data.js?v=20261003-smooth-cache"></script>
+<script src="assets/data/field.data.js?v=20261011-field-chapters"></script>
+<script src="assets/data/moments.data.js?v=20261011-natural-masonry"></script>
+<script src="assets/data/field.sources.data.js?v=20261010-field-room"></script>
+<script src="assets/data/field.cad.data.js?v=20261010-stadium-3d"></script>
+<script src="assets/data/nanshan.city.data.js?v=20261003-shenzhen-buildings-v1"></script>
+<script src="assets/data/chengnan.checkup.data.js?v=20261007-poi-buffers"></script>
+<script src="assets/data/convenience-store.data.js?v=20261007-observed-slices"></script>
+<script src="assets/data/convenience-research.data.js?v=20261007-research-narrative"></script>
+
+<!-- 2. 工具层：Agent D 提供 -->
+<script src="js/placeholder.js?v=20261003-smooth-cache"></script>
+
+<!-- 3. 内容模块：Agent D 提供，必须先于 app.js -->
+<script src="js/content-module.js?v=20261011-natural-masonry"></script>
+<script src="js/moments-room.js?v=20261011-natural-masonry"></script>
+<script src="js/field-pendant.js?v=20261010-pendant-members"></script>
+<script src="assets/data/field.pendant.catalog.data.js?v=20261010-pendant-members"></script>
+<script src="js/field-room.js?v=20261011-natural-masonry"></script>
+<script src="js/rhythm-visualizer.js?v=20261008-play-visuals"></script>
+<script src="js/rhythm-player.js?v=20261008-play-lifecycle"></script>
+
+<!-- 空间内页：Three.js 本地打包，保持 file:// 离线打开可用 -->
+<script src="js/vendor/three.r128.min.js?v=128"></script>
+<script src="js/camera-motion.js?v=20261007-unified-orbit"></script>
+<script src="js/field-stadium.js?v=20261011-field-chapters"></script>
+<script src="js/city-checkup.js?v=20261007-unified-orbit"></script>
+<script src="js/convenience-research.js?v=20261007-trends-hotspot-picking"></script>
+<script src="js/convenience-store.js?v=20261007-research-narrative"></script>
+<script src="js/space-city.js?v=20261008-gpu-lifecycle"></script>
+
+<!-- 4. 地图引擎：Agent C 提供 -->
+<!-- environment.js 根据站点经纬度与当前时间计算太阳位置，并提供远景动态驱动 -->
+<script src="js/environment.js?v=20261003-smooth-cache"></script>
+<!-- terrain.js 是纯计算模块（高度场 / marching squares / 山体阴影 / extent），
+     不碰 DOM、无依赖，必须先于 map-engine.js 加载 -->
+<script src="js/terrain.js?v=20261003-smooth-cache"></script>
+<script src="js/landmarks.js?v=20261007-unified-orbit"></script>
+<script src="js/terrain-orbit.js?v=20261008-gpu-lifecycle"></script>
+<script src="js/map-engine.js?v=20261010-field-room"></script>
+<script src="js/camera.js?v=20261007-unified-orbit"></script>
+
+<!-- 5. 启动器：必须最后 -->
+<script src="js/intro-screen.js?v=20261009-independent-type"></script>
+<script src="js/app.js?v=20261011-reviewed-moments"></script>
+</body>
+</html>
+<style id="minimal-interface-overrides">
+  .p-bar,.f-bar,.r-room__bar,.s-city__bar{display:flex!important;align-items:center!important;justify-content:flex-start!important;grid-template-columns:none!important}
+  .p-bar h2,.f-bar h2,.r-room__bar h2,.r-room__count,.s-city__identity,.s-city__readout{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important;border:0!important}
+  .p-bar button,.f-bar button,.r-room__bar button,.s-city__back{font-size:0!important}
+  .p-bar button::after,.f-bar button::after,.r-room__bar button::after,.s-city__back::after{content:'返回';font-size:var(--text-sm)!important;line-height:1}
+  .m-intro__coordinates,.m-intro__name{display:none!important}
+  .m-intro__footer{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
+</style>
+<script>
+(function(){
+  var hour=new Date().getHours();
+  var dark=hour<6||hour>=18;
+  var root=document.documentElement;
+  root.setAttribute('data-theme',dark?'dark':'light');
+  root.setAttribute('data-mode',dark?'night':'day');
+  root.setAttribute('data-theme-mode',dark?'night':'day');
+  root.setAttribute('data-time-of-day',dark?'night':'day');
+  root.classList.toggle('is-dark',dark);
+  root.classList.toggle('is-light',!dark);
+  root.classList.toggle('dark-mode',dark);
+  root.classList.toggle('light-mode',!dark);
+  root.classList.toggle('is-night',dark);
+  root.classList.toggle('is-day',!dark);
+  function syncBody(){
+    if(!document.body)return;
+    document.body.setAttribute('data-theme',dark?'dark':'light');
+    document.body.setAttribute('data-mode',dark?'night':'day');
+    document.body.setAttribute('data-theme-mode',dark?'night':'day');
+    document.body.setAttribute('data-time-of-day',dark?'night':'day');
+    document.body.classList.toggle('is-dark',dark);
+    document.body.classList.toggle('is-light',!dark);
+    document.body.classList.toggle('dark-mode',dark);
+    document.body.classList.toggle('light-mode',!dark);
+    document.body.classList.toggle('is-night',dark);
+    document.body.classList.toggle('is-day',!dark);
+  }
+  if(document.body)syncBody();else document.addEventListener('DOMContentLoaded',syncBody,{once:true});
+}());
+</script>
+<style id="final-interface-cleanup">
+  .m-time-control,.m-time-widget,.m-home-time,.home-time-control,.time-control,[data-time-control],#time-control,#timezone-control{display:none!important}
+  [data-ui-corner-hidden="true"]{display:revert!important}
+</style>
+<script>
+(function(){
+  var replacement='为什么棒球是最好的运动？<br>因为别的运动都没有棒球棒！';
+  function isLeaf(el){return el.children.length===0&&el.textContent.trim();}
+  function compactTarget(el){
+    var target=el;
+    while(target.parentElement&&target.parentElement!==document.body&&target.parentElement.children.length<=2&&target.parentElement.textContent.trim()===target.textContent.trim())target=target.parentElement;
+    return target;
+  }
+  function cleanField(){
+    var field=document.querySelector('.f-room,.field-room,[data-room="field"],#field-room')||document.body;
+    field.querySelectorAll('*').forEach(function(el){
+      if(!isLeaf(el))return;
+      var text=el.textContent.trim();
+      if(text==='我和棒垒'||text.indexOf('我和棒垒')===0){
+        compactTarget(el).setAttribute('data-ui-corner-hidden','true');
+      }else if(text.indexOf('选择场上的一个位置')!==-1){
+        compactTarget(el).setAttribute('data-ui-corner-hidden','true');
+      }else if(text.indexOf('回到球场')!==-1||text.indexOf('球还没到')!==-1||text.indexOf('其他运动都没有棒球棒')!==-1||text.indexOf('别的运动都没有棒球棒')!==-1){
+        el.innerHTML=replacement;
+      }
+    });
+  }
+  function cleanHome(){
+    return;
+    document.querySelectorAll('body *').forEach(function(el){
+      if(!isLeaf(el))return;
+      var text=el.textContent.trim();
+      if(!text||text.indexOf('坐标之外')!==-1)return;
+      if(text.indexOf('时区')!==-1||text.indexOf('当前时间')!==-1||text.indexOf('太阳位置')!==-1||text.indexOf('时间调整')!==-1){
+        compactTarget(el).setAttribute('data-ui-corner-hidden','true');
+        return;
+      }
+      var parent=el.closest('button,a,[role="button"]');
+      if(parent)return;
+      var anchor=el;
+      while(anchor.parentElement&&anchor!==document.body&&getComputedStyle(anchor).position==='static')anchor=anchor.parentElement;
+      var style=getComputedStyle(anchor);
+      if(style.position!=='fixed'&&style.position!=='absolute')return;
+      var rect=anchor.getBoundingClientRect();
+      var nearLeft=rect.left<90,nearRight=rect.right>innerWidth-90,nearTop=rect.top<90,nearBottom=rect.bottom>innerHeight-90;
+      var isSmallLayer=rect.width<innerWidth*.55&&rect.height<innerHeight*.55;
+      if(anchor===document.body||anchor.id==='app'||anchor.tagName==='MAIN'||!isSmallLayer)return;
+      if((nearLeft||nearRight)&&(nearTop||nearBottom))anchor.setAttribute('data-ui-corner-hidden','true');
+    });
+  }
+  function clean(){
+    document.querySelectorAll('[data-ui-corner-hidden]').forEach(function(el){el.removeAttribute('data-ui-corner-hidden');});
+    cleanField();
+  }
+  function install(){return;}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+}());
+</script>
+<script>
+(function(){
+  function cleanHomeChrome(){
+    return;
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(cleanHomeChrome,1800);},{once:true});
+  else setTimeout(cleanHomeChrome,1800);
+}());
+</script>
+<script>
+(function(){
+  function removeHomeAuxiliary(){
+    var selectors='[data-scale],[data-coordinate],[data-coordinates],.m-scale,.scale-bar,.m-coordinate,.coordinates,.coordinate-readout';
+    document.querySelectorAll(selectors).forEach(function(el){el.style.display='none';});
+    document.querySelectorAll('body *').forEach(function(el){
+      if(el.children.length||!el.textContent.trim())return;
+      var text=el.textContent.trim();
+      if(text==='坐标之外')return;
+      if(text.indexOf('待填·一句手写体签名')!==-1||text==='比例尺'||text.indexOf('比例尺')!==-1||text.indexOf('经度')!==-1||text.indexOf('纬度')!==-1||text.indexOf('海拔')!==-1||text.indexOf('坐标：')!==-1||text.indexOf('坐标:')!==-1){
+        var target=el.parentElement&&el.parentElement!==document.body&&el.parentElement.children.length<=3?el.parentElement:el;
+        target.style.display='none';
+      }
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(removeHomeAuxiliary,1200);},{once:true});else setTimeout(removeHomeAuxiliary,1200);
+}());
+</script>
+<script>
+(function(){
+  function removeExactHomeLabels(){
+    document.querySelectorAll('body *').forEach(function(el){
+      if(el.children.length||!el.textContent.trim())return;
+      var raw=el.textContent.trim();
+      var compact=raw.replace(/\s+/g,'').toUpperCase();
+      var isScale=compact.indexOf("34°16'N108°56'E")!==-1||compact.indexOf('SCALE1:55900')!==-1||compact.indexOf('CONTOURINTERVAL10M')!==-1;
+      var isSignature=raw.indexOf('待填')!==-1&&raw.indexOf('手写体签名')!==-1;
+      if(!isScale&&!isSignature)return;
+      var target=el.parentElement&&el.parentElement!==document.body&&el.parentElement.children.length<=3?el.parentElement:el;
+      target.style.display='none';
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(removeExactHomeLabels,1600);},{once:true});else setTimeout(removeExactHomeLabels,1600);
+}());
+</script>
+<script>
+(function(){
+  function removeHomeCopy(){
+    var phrases=['一张会随内容长高的地形图','点击地标进入 · 视角将随内容自动变换'];
+    document.querySelectorAll('body *').forEach(function(el){
+      if(el.children.length||!el.textContent.trim())return;
+      var text=el.textContent.trim();
+      if(phrases.some(function(phrase){return text.indexOf(phrase)!==-1;})){
+        var target=el.parentElement&&el.parentElement!==document.body&&el.parentElement.children.length<=3?el.parentElement:el;
+        target.style.display='none';
+      }
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(removeHomeCopy,1200);},{once:true});else setTimeout(removeHomeCopy,1200);
+}());
+</script>
+<script>
+(function(){
+  function removeAboutAndMark(){
+    document.querySelectorAll('body *').forEach(function(el){
+      if(el.children.length||!el.textContent.trim())return;
+      var text=el.textContent.trim();
+      if(text!=='关于'&&text!=='印记')return;
+      var target=el.closest('button,a,[role="button"]');
+      if(!target)target=el.parentElement&&el.parentElement!==document.body&&el.parentElement.children.length<=3?el.parentElement:el;
+      target.style.display='none';
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(removeAboutAndMark,1200);},{once:true});else setTimeout(removeAboutAndMark,1200);
+}());
+</script>

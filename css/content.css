@@ -1,0 +1,838 @@
+/* =============================================================================
+ * content.css —— 内容呈现模块样式（Agent D）
+ * -----------------------------------------------------------------------------
+ * 依据：《05-UI设计规范》§6.1–6.8 组件规范 / §三 字体 / §四 间距 / §八 响应式 / §九 无障碍
+ *       《06-开发接口契约》§3.2 类名前缀、§5 视觉契约、§六 动效契约
+ *
+ * 纪律：
+ *   · 类名统一 c- 前缀，不越界到 m- / u-
+ *   · 颜色一律走 var()，本节内不出现任何字面色值（可 grep # 验证）
+ *   · 场的识别色只消费 --field-color / --field-color-light / --field-color-dark，
+ *     由 .c-root[data-field] / .c-note[data-field] 注入，一套组件跨三个场复用
+ * ========================================================================== */
+
+/* -----------------------------------------------------------------------------
+ * 一、变量桥接 + 作用域
+ * -----------------------------------------------------------------------------
+ * 契约 §5 约定 Agent C 在 #overlay-content 上设置 --field-color。为做到
+ * 「即使对方样式未就位也不失色」，这里在同一批 token 上再声明一遍 ——
+ * 值完全相同（都指向 tokens.css 的三档识别色），因此不会产生分歧。
+ * 级联上元素自身的声明优先于祖先，结果一致。
+ * -------------------------------------------------------------------------- */
+
+.c-root[data-field="space"],
+.c-note[data-field="space"] {
+  --field-color: var(--color-space);
+  --field-color-light: var(--color-space-light);
+  --field-color-dark: var(--color-space-dark);
+}
+.c-root[data-field="light"],
+.c-note[data-field="light"] {
+  --field-color: var(--color-light);
+  --field-color-light: var(--color-light-light);
+  --field-color-dark: var(--color-light-dark);
+}
+.c-root[data-field="rhythm"],
+.c-note[data-field="rhythm"] {
+  --field-color: var(--color-rhythm);
+  --field-color-light: var(--color-rhythm-light);
+  --field-color-dark: var(--color-rhythm-dark);
+}
+.c-root[data-field="taste"],
+.c-note[data-field="taste"] {
+  --field-color: var(--color-taste);
+  --field-color-light: var(--color-taste-light);
+  --field-color-dark: var(--color-taste-dark);
+}
+.c-root[data-field="field"],
+.c-note[data-field="field"] {
+  --field-color: var(--color-field);
+  --field-color-light: var(--color-field-light);
+  --field-color-dark: var(--color-field-dark);
+}
+
+/* 动效时长（契约 §六 动效表；降级时统一归零） */
+.c-root {
+  --c-dur-fast: 160ms;
+  --c-dur-enter: 320ms;
+  --c-stagger: 60ms;
+  --c-dur-expand: 300ms;
+  --c-dur-note: 240ms;
+  --c-ease: cubic-bezier(0.65, 0, 0.35, 1);
+  --c-ease-out: ease-out;
+}
+
+/* 性能降级与系统偏好：动效归零，布局与功能完整保留（契约 §六） */
+.c-root[data-mode="static"],
+.c-root[data-mode="reduced"] {
+  --c-dur-fast: 0ms;
+  --c-dur-enter: 0ms;
+  --c-stagger: 0ms;
+  --c-dur-expand: 0ms;
+  --c-dur-note: 0ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .c-root,
+  .c-root *,
+  .c-root *::before,
+  .c-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+ * 二、骨架：顶栏 + 滚动体（《05》§6.3）
+ * -------------------------------------------------------------------------- */
+
+.c-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+}
+
+.c-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--space-16);
+  padding: 0 var(--space-10);
+  border-bottom: var(--space-px) solid var(--color-border);
+  background: var(--color-paper-0);
+}
+
+.c-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--space-10);
+  -webkit-overflow-scrolling: touch;
+}
+/* external：外层 #overlay-content 已是「有内边距的滚动容器」（Agent C 提供），
+   这里必须让出内边距与滚动，否则会出现双层 40px 内边距 + 嵌套滚动条 */
+.c-root[data-shell="external"] {
+  height: auto;
+  min-height: 0;
+}
+.c-root[data-shell="external"] .c-body {
+  padding: 0;
+  overflow: visible;
+}
+
+.c-body::-webkit-scrollbar { width: 6px; }
+.c-body::-webkit-scrollbar-track { background: var(--color-paper-2); }
+.c-body::-webkit-scrollbar-thumb {
+  background: var(--color-paper-4);
+  border-radius: var(--radius-md);
+}
+
+/* 视口内边距按断点收敛（《05》§8.1） */
+@media (max-width: 1199px) {
+  .c-bar { padding: 0 var(--space-8); }
+  .c-body { padding: var(--space-8); }
+}
+@media (max-width: 767px) {
+  .c-bar { padding: 0 var(--space-5); }
+  .c-body { padding: var(--space-5); }
+}
+
+/* -----------------------------------------------------------------------------
+ * 三、返回按钮（《05》§6.4）
+ * -------------------------------------------------------------------------- */
+
+.c-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--space-12);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-ink-2);
+  background: none;
+  border: var(--space-px) solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: color var(--c-dur-fast) var(--c-ease-out),
+              border-color var(--c-dur-fast) var(--c-ease-out);
+}
+.c-back:hover { color: var(--color-accent); border-color: var(--color-accent); }
+.c-back:active { transform: scale(0.98); }
+.c-back__icon {
+  width: var(--space-4);
+  height: var(--space-4);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25;
+  flex: 0 0 auto;
+  transition: transform var(--c-dur-fast) var(--c-ease-out);
+}
+.c-back:hover .c-back__icon { transform: translateX(-3px); }
+
+/* 焦点环（《05》§9.2，全站统一） */
+.c-root :focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+.c-root :focus:not(:focus-visible) { outline: none; }
+
+/* -----------------------------------------------------------------------------
+ * 四、视图页眉（场名 / 英文名 / 自述）
+ * -------------------------------------------------------------------------- */
+
+.c-view { max-width: var(--layout-max); }
+
+.c-head { margin-bottom: var(--space-8); }
+
+/* ① 英文场名 —— 地图图廓上的地名排法（《05》§3.7①） */
+.c-head__eyebrow {
+  font-family: var(--font-latin);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-3);
+}
+
+/* ② 中文场名 —— Overlay 主标题（《05》§3.7②） */
+/* 主色仅用于 ≥24px 展示型大字（《05》§2.3 核心规则） */
+.c-head__title {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--field-color, var(--color-text));
+  margin: 0 0 var(--space-3);
+}
+.c-view[data-view="about"] .c-head__title,
+.c-view[data-view="notes"] .c-head__title { color: var(--color-text); }
+
+.c-head__subtitle {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-4);
+}
+
+/* 场的自述：段落引导句 */
+.c-head__intro {
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-secondary);
+  max-width: var(--measure);
+  margin: 0;
+}
+
+.c-head__count {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* 标题与地图共享绿系，五个栏目采用同一编辑式标题层级。 */
+.c-view[data-view="field"] .c-head { margin-bottom: clamp(32px, 5vh, 56px); }
+.c-view[data-view="field"] .c-head__eyebrow {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-latin);
+  font-size: clamp(32px, 3.5vw, 52px);
+  font-weight: var(--weight-regular);
+  line-height: 1;
+  letter-spacing: .06em;
+  color: var(--field-color);
+}
+.c-view[data-view="field"] .c-head__title {
+  margin-bottom: var(--space-6);
+  font-size: clamp(56px, 5.8vw, 84px);
+  line-height: 1.15;
+  font-weight: var(--weight-medium);
+}
+.c-view[data-view="field"] .c-head__subtitle {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+/* SPACE uses a dedicated hand-off instead of the temporary portfolio cards. */
+.c-space-view { min-height: 0; }
+.c-space-entry {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.c-space-entry > * { position: relative; z-index: 1; }
+.c-space-entry__title {
+  margin: 0 0 var(--space-5);
+  font: var(--weight-medium) clamp(28px, 2.8vw, 40px)/var(--leading-snug) var(--font-display);
+  letter-spacing: 0;
+  color: var(--color-ink-1);
+}
+.c-space-entry__desc {
+  max-width: 26em;
+  margin: 0 0 0 auto;
+  font: var(--text-base)/var(--leading-relaxed) var(--font-body);
+  color: var(--color-ink-2);
+}
+.c-space-entry__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: var(--space-1) 0;
+  border: 0;
+  background: transparent;
+  color: var(--field-color-dark);
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+  transition: transform var(--c-dur-fast) var(--c-ease-out), background var(--c-dur-fast) var(--c-ease-out);
+}
+.c-space-entry__button:hover { color: var(--field-color); }
+.c-space-entry__button span { font-size: .65em; transition: transform var(--c-dur-fast) ease-out; }
+.c-space-entry__button:hover span { transform: translate(3px, -3px); }
+
+/* 只有文字落在矩形上；间隙完全透出地形。共用主题纸色，不模糊地图。 */
+.c-root[data-shell="external"] {
+  --c-block-bg: color-mix(in srgb, var(--color-paper-0) 62%, transparent);
+  --c-block-pad: clamp(16px, 1.4vw, 20px);
+  text-align: right;
+}
+.c-root[data-shell="external"] .c-view {
+  max-width: 520px;
+  margin-left: auto;
+}
+.c-root[data-shell="external"] .c-head {
+  width: fit-content;
+  max-width: 100%;
+  height: auto;
+  margin-left: auto;
+  padding: var(--c-block-pad);
+  margin-bottom: var(--space-6);
+  background: var(--c-block-bg);
+}
+.c-root[data-shell="external"] .c-head__intro { margin-left: auto; }
+.c-root[data-shell="external"] .c-head__title { margin-bottom: var(--space-3); }
+.c-root[data-shell="external"] .c-head__subtitle { margin-bottom: 0; }
+.c-root[data-shell="external"] .c-space-entry__copy {
+  width: fit-content;
+  max-width: 100%;
+  height: auto;
+  margin-left: auto;
+  padding: var(--c-block-pad);
+  background: var(--c-block-bg);
+}
+.c-root[data-shell="external"] .c-space-entry__title { margin-bottom: var(--space-3); }
+.c-root[data-shell="external"] .c-segmented {
+  padding: var(--space-2) var(--c-block-pad);
+  margin-bottom: var(--space-6);
+  background: var(--c-block-bg);
+  border: 0;
+}
+.c-root[data-shell="external"] .c-panel {
+  padding: var(--c-block-pad);
+  background: var(--c-block-bg);
+}
+.c-root[data-shell="external"] .c-works { grid-template-columns: minmax(0, 1fr); }
+.c-root[data-shell="external"] .c-work { max-width: none; background: transparent; border-radius: 0; }
+.c-root[data-shell="external"] .c-work__toggle { align-self: flex-end; }
+
+@media (max-width: 520px) {
+  .c-space-view { min-height: auto; }
+  .c-space-entry { padding: 0; }
+}
+
+/* -----------------------------------------------------------------------------
+ * 五、分段切换器（作品 / 印记）（《05》§6.3）
+ * -------------------------------------------------------------------------- */
+
+.c-segmented {
+  display: inline-flex;
+  gap: var(--space-6);
+  border-bottom: var(--space-px) solid var(--color-border-soft);
+  margin-bottom: var(--space-8);
+}
+.c-segmented__item {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-ink-3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--c-dur-fast) var(--c-ease-out);
+}
+.c-segmented__item:hover { color: var(--color-ink-2); }
+.c-segmented__item[aria-selected="true"] { color: var(--color-ink-1); }
+.c-segmented__item[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--color-accent);
+}
+.c-segmented__count {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--color-text-muted);
+}
+
+/* -----------------------------------------------------------------------------
+ * 六、作品卡（《05》§6.1）
+ * -------------------------------------------------------------------------- */
+
+.c-works {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.c-work {
+  display: flex;
+  flex-direction: column;
+  max-width: 400px;                     /* 《05》§6.1 卡片最大宽度 */
+  padding: var(--space-4);
+  gap: var(--space-3);
+  background: var(--color-paper-0);
+  border: var(--space-px) solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: box-shadow var(--c-dur-expand) var(--c-ease-out),
+              border-color var(--c-dur-expand) var(--c-ease-out),
+              transform var(--c-dur-expand) var(--c-ease-out);
+  animation: c-enter var(--c-dur-enter) var(--c-ease-out) both;
+  animation-delay: calc(min(var(--c-i, 0), 6) * var(--c-stagger));
+}
+.c-work:hover {
+  border-color: var(--field-color, var(--color-border));
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+.c-work:hover .c-work__divider { background: var(--field-color, var(--color-border)); }
+.c-work:hover .c-work__title { color: var(--field-color-dark, var(--color-ink-1)); }
+.c-work:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
+.c-work[data-expanded="true"] {
+  transform: none;
+  box-shadow: var(--shadow-lg);
+  border-color: var(--field-color-dark, var(--color-border));
+}
+/* 焦点环 + 识别色描边双保险（《05》§9.2） */
+.c-work:focus-within {
+  border-color: var(--field-color-dark, var(--color-border));
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.c-work__cover {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-3);
+}
+.c-work__cover > img,
+.c-work__cover > svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.c-work__img { position: absolute; inset: 0; }
+/* 图加载失败：隐藏它，底层的占位图自然显露 —— 不出现破图 */
+.c-work__img[data-broken="true"] { display: none; }
+
+.c-work__title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+  color: var(--color-ink-1);
+  transition: color var(--c-dur-fast) var(--c-ease-out);
+}
+.c-work__meta {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-cn);
+  line-height: var(--leading-normal);
+  color: var(--color-ink-3);
+}
+.c-work__dot { padding: 0 var(--space-1); color: var(--color-ink-faint); }
+.c-work__divider {
+  height: var(--space-px);
+  background: var(--color-border-soft);
+  transition: background-color var(--c-dur-expand) var(--c-ease-out);
+}
+.c-work__summary {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--color-ink-2);
+  max-width: var(--measure);
+}
+
+.c-work__toggle {
+  align-self: flex-start;
+  min-height: var(--space-8);
+  padding: var(--space-1) var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-ink-3);
+  background: none;
+  border: var(--space-px) solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: color var(--c-dur-fast) var(--c-ease-out),
+              border-color var(--c-dur-fast) var(--c-ease-out);
+}
+.c-work__toggle:hover {
+  color: var(--field-color-dark, var(--color-ink-1));
+  border-color: var(--field-color, var(--color-border));
+}
+
+/* 详情面板：grid-template-rows 0fr → 1fr 展开（契约 §六 300ms） */
+.c-work__detail {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--c-dur-expand) var(--c-ease);
+}
+.c-work[data-expanded="true"] .c-work__detail { grid-template-rows: 1fr; }
+.c-work__detail-inner {
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: var(--space-px) solid var(--color-border-soft);
+}
+.c-work__detail-cover {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-3);
+}
+.c-work__detail-cover > img,
+.c-work__detail-cover > svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.c-work__detail-meta {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-ink-3);
+}
+.c-work__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.c-tag {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-ink-1);
+  background: var(--field-color-light, var(--color-paper-2));
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.c-work__desc { display: flex; flex-direction: column; gap: var(--space-5); }
+.c-work__para {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--color-ink-1);
+  max-width: var(--measure);
+  text-align: justify;
+  text-justify: inter-ideograph;
+}
+.c-work__gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-3);
+}
+.c-work__fig {
+  margin: 0;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-3);
+}
+.c-work__fig > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+@keyframes c-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* -----------------------------------------------------------------------------
+ * 七、笔记条（《05》§6.2）
+ * -------------------------------------------------------------------------- */
+
+.c-notes { display: flex; flex-direction: column; gap: var(--space-4); }
+
+/* 聚合流：一条贯穿的时间轴竖线，笔记的识别色竖线骑在线上 */
+.c-notes[data-timeline="true"] {
+  position: relative;
+  padding-left: var(--space-2);
+}
+.c-notes[data-timeline="true"]::before {
+  content: "";
+  position: absolute;
+  left: var(--space-1);
+  top: var(--space-2);
+  bottom: var(--space-2);
+  width: var(--space-px);
+  background: var(--color-border-soft);
+}
+
+.c-note {
+  position: relative;
+  padding: var(--space-5) var(--space-6);
+  background: var(--color-paper-2);
+  border-left: var(--space-1) solid var(--field-color, var(--color-border));
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  transition: background-color var(--c-dur-fast) var(--c-ease-out),
+              border-left-width var(--c-dur-fast) var(--c-ease-out);
+  animation: c-enter var(--c-dur-enter) var(--c-ease-out) both;
+  animation-delay: calc(min(var(--c-i, 0), 6) * var(--c-stagger));
+}
+.c-note:hover {
+  background: var(--color-paper-0);
+  border-left-width: 6px;               /* 《05》§6.2 悬停 4px → 6px，上限 */
+}
+.c-note:focus-within {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.c-note__body { position: relative; }
+.c-note__text {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-loose);    /* 笔记是碎片，需要更多呼吸 */
+  color: var(--color-ink-1);
+  max-width: var(--measure);
+  margin: 0;
+  transition: opacity var(--c-dur-note) var(--c-ease-out);
+}
+/* 超长文本（>120 字）折叠态：4 行 clamp + 底部渐隐 */
+.c-note[data-clamped="true"] .c-note__text {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.c-note[data-clamped="true"] .c-note__body::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--space-8);
+  background: linear-gradient(180deg, transparent, var(--color-paper-2));
+  pointer-events: none;
+  transition: opacity var(--c-dur-note) var(--c-ease-out);
+}
+.c-note[data-clamped="true"]:hover .c-note__body::after {
+  background: linear-gradient(180deg, transparent, var(--color-paper-0));
+}
+
+.c-note__more {
+  margin-top: var(--space-3);
+  min-height: var(--space-8);
+  padding: 0 var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-ink-3);
+  background: none;
+  border: none;
+  border-bottom: var(--space-px) solid var(--color-border);
+  cursor: pointer;
+  transition: color var(--c-dur-fast) var(--c-ease-out),
+              border-color var(--c-dur-fast) var(--c-ease-out);
+}
+.c-note__more:hover {
+  color: var(--field-color-dark, var(--color-accent));
+  border-color: var(--field-color-dark, var(--color-accent));
+}
+
+.c-note__meta {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-ink-3);
+}
+/* 小字号一律用 -dark 档（主色对小字对比度不足，《05》§2.3） */
+.c-note__field {
+  font-family: var(--font-latin);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--field-color-dark, var(--color-ink-3));
+}
+.c-note__date {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--color-ink-3);
+}
+.c-note__figure {
+  position: relative;
+  margin-top: var(--space-4);
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-3);
+}
+.c-note__figure > svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.c-note__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.c-note__img[data-broken="true"] { display: none; }
+
+/* 移动端笔记条内边距（《05》§8.1） */
+@media (max-width: 1199px) {
+  .c-note { padding: var(--space-4) var(--space-5); }
+}
+@media (max-width: 767px) {
+  .c-note { padding: var(--space-4); }
+  .c-notes[data-timeline="true"] { padding-left: 0; }
+  .c-notes[data-timeline="true"]::before { display: none; }
+}
+
+/* -----------------------------------------------------------------------------
+ * 八、关于页正文（《05》§3.7③ + §3.4）
+ * -------------------------------------------------------------------------- */
+
+.c-about { display: flex; flex-direction: column; gap: var(--space-5); }
+.c-about__para {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-loose);
+  color: var(--color-ink-1);
+  max-width: var(--measure);
+  text-align: justify;
+  text-justify: inter-ideograph;
+}
+
+/* -----------------------------------------------------------------------------
+ * 九、空状态（《05》§6.7）
+ * -------------------------------------------------------------------------- */
+
+.c-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-20) var(--space-8);
+  text-align: center;
+}
+.c-empty__mark { width: 72px; height: 72px; opacity: 0.3; }
+.c-empty__text {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--color-ink-3);
+  margin: 0;
+}
+.c-empty__hint {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--color-ink-3);
+  opacity: 0.85;
+  margin: 0;
+}
+
+/* 数据错误卡（兜底，不白屏） */
+.c-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--space-32);
+  padding: var(--space-10) var(--space-8);
+  background: var(--color-error-wash);
+  border: var(--space-px) solid var(--color-error-soft);
+  border-radius: var(--radius-md);
+}
+.c-error__text {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--color-error);
+  max-width: var(--measure);
+  text-align: center;
+  margin: 0;
+}
+
+/* -----------------------------------------------------------------------------
+ * 十、占位图（《05》§6.8）
+ * -------------------------------------------------------------------------- */
+
+.c-placeholder {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  /* 底：场浅色档 → 纸色，方向固定 135° */
+  background: linear-gradient(135deg,
+    var(--field-color-light, var(--color-paper-3)) 0%,
+    var(--color-paper-2) 100%);
+  background-blend-mode: multiply;
+}
+.c-placeholder__art { width: 62%; height: auto; opacity: 0.42; }
+.c-placeholder__tag {
+  position: absolute;
+  left: var(--space-4);
+  bottom: var(--space-4);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-ink-4);
+  background: var(--color-paper-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+/* -----------------------------------------------------------------------------
+ * 十一、响应式补充（《05》§8.1）
+ * -------------------------------------------------------------------------- */
+
+@media (max-width: 1199px) {
+  .c-works { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+}
+@media (max-width: 767px) {
+  .c-works { grid-template-columns: minmax(0, 1fr); }
+  .c-work { max-width: none; }
+  .c-head__title { font-size: var(--text-2xl); }
+  .c-segmented { gap: var(--space-5); }
+  .c-empty { padding: var(--space-16) var(--space-4); }
+}

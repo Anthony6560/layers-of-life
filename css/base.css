@@ -1,0 +1,429 @@
+@charset "UTF-8";
+/* ============================================================================
+   base.css —— reset、排版基线、纸张底纹、经纬网格背景、noscript 目录页
+   ----------------------------------------------------------------------------
+   依据《05-UI设计规范》§3.2（排版基线）、§5.3（纸张底纹）、§9.2（焦点态）、
+   §10.4（无 JS 降级）、§8.1（断点）、§8.3（超宽屏图廓线）。
+   类名前缀：本文件中的组件类一律 m-（契约 §3.2；仅语义化标签选择器例外）。
+   ============================================================================ */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   1 —— reset
+   ══════════════════════════════════════════════════════════════════════════ */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html {
+  height: 100%;
+  background: var(--color-bg);       /* 兜底：overscroll 时不露出浏览器底色 */
+  -webkit-text-size-adjust: 100%;    /* 移动端横竖屏切换不缩放字号 */
+  /* 注意：不设置 user-scalable=no（05 §9.5 禁止阻止用户缩放） */
+}
+
+/* ⚠️ overflow:hidden 放在 #app 上而不是 body 上（见 map.css）——
+   body 必须保持可滚动，否则拿掉 JS 之后 <noscript> 的目录页会被裁掉。
+   #app 是 position:fixed; inset:0，有它兜住，带 JS 时照样不会出现滚动条。 */
+body {
+  min-height: 100%;
+  margin: 0;
+  background: var(--color-bg);
+  transition: background-color 900ms var(--ease-standard), color 700ms var(--ease-standard);
+}
+
+/* 开屏阶段等待主体 / 远景 / 全域阴影完成；地图进入后只保留一个淡出层，
+   播放阶段不再把昂贵的地形几何计算和首屏绘制叠在一起。 */
+#terrain-preloader {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: max(36px, env(safe-area-inset-top)) 28px max(36px, env(safe-area-inset-bottom));
+  background: var(--color-paper-1);
+  color: var(--color-ink-2);
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 420ms var(--ease-standard), visibility 420ms linear;
+}
+#terrain-preloader[data-state="ready"] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.m-preloader__inner {
+  position: relative;
+  isolation: isolate;
+  width: min(760px, 100%);
+  margin: auto;
+}
+.m-intro__coordinates { position: absolute; inset: -74px -88px -60px -86px; z-index: -1; color: var(--color-accent); pointer-events: none; }
+.m-intro__coordinates svg { width: 100%; height: 100%; overflow: visible; fill: none; stroke: currentColor; stroke-width: 1; }
+.m-intro__coordinates svg path, .m-intro__coordinates svg circle { vector-effect: non-scaling-stroke; }
+.m-intro__frame { opacity: .12; stroke-dasharray: 5 8; }
+.m-intro__axes { opacity: .32; }
+.m-intro__ticks { opacity: .24; }
+.m-intro__axis { position: absolute; font: 400 11px/1 var(--font-mono); opacity: .55; }
+.m-intro__axis--origin { left: 2.1%; bottom: 3.1%; }
+.m-intro__axis--x { right: .2%; bottom: 6.3%; }
+.m-intro__axis--y { left: .3%; bottom: 14.4%; }
+.m-intro__axis--z { left: 3.4%; top: .2%; }
+.m-intro__name { display: block; position: relative; width: max-content; padding-right: 10px; background: var(--color-paper-1); margin-bottom: 38px; font: 400 var(--text-xs)/1.8 var(--font-ui); letter-spacing: .24em; color: var(--color-accent); }
+.m-intro__copy h1 { margin: 0 0 28px; font: 400 clamp(26px, 3vw, 36px)/1.6 var(--font-display); color: var(--color-ink-1); }
+.m-intro__copy p { margin: 0 0 22px; font: 400 clamp(16px, 1.5vw, 18px)/2 var(--font-body); }
+.m-intro__copy p:last-child { margin-bottom: 0; }
+.m-intro__copy [data-intro-line] { visibility: hidden; }
+#terrain-preloader[data-typing] [data-intro-line] { visibility: visible; }
+.m-intro__remaining { visibility: hidden; }
+.m-intro__caret { display: inline-block; width: 1px; height: 1em; margin-left: 2px; margin-right: -3px; vertical-align: -.12em; background: var(--color-accent); animation: m-intro-blink 1s steps(1) infinite; }
+.m-intro__caret[hidden] { display: none; }
+.m-intro__footer { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--color-border); }
+.m-intro__loading { position: relative; width: 150px; flex-shrink: 0; background: var(--color-paper-1); }
+.m-intro__actions { display: flex; align-items: center; gap: 26px; font: 400 var(--text-sm)/1.8 var(--font-ui); }
+.m-intro__skip { color: var(--color-ink-3); }
+.m-intro__enter { color: var(--color-accent); }
+.m-intro__enter span { margin-left: 10px; }
+.m-intro__actions button { min-height: 44px; white-space: nowrap; }
+.m-intro__actions button:hover:not(:disabled) { color: var(--color-ink-1); }
+.m-intro__enter:disabled { opacity: .35; cursor: default; }
+.m-intro__skip[hidden] { display: none; }
+@keyframes m-intro-blink { 50% { opacity: 0; } }
+@media (max-width: 600px) {
+  #terrain-preloader { padding: 32px 24px; }
+  .m-intro__coordinates { inset: -40px -16px -42px -20px; }
+  .m-intro__axes { opacity: .23; }
+  .m-intro__frame { opacity: .08; }
+  .m-intro__axis--y { left: .3%; bottom: 14.4%; }
+  .m-intro__name { margin-bottom: 26px; }
+  .m-intro__copy h1 { margin-bottom: 22px; }
+  .m-intro__copy p { margin-bottom: 18px; line-height: 1.9; }
+  .m-intro__footer { flex-wrap: wrap; gap: 14px; margin-top: 28px; }
+  .m-intro__actions { margin-left: auto; gap: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .m-intro__caret { animation: none; }
+  #terrain-preloader { transition: none; }
+}
+.m-preloader__label {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-cn);
+}
+.m-preloader__track {
+  height: 1px;
+  margin-top: 14px;
+  overflow: hidden;
+  background: var(--color-paper-3);
+}
+.m-preloader__track i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--color-accent);
+  transition: width 160ms linear;
+}
+
+h1, h2, h3, h4, h5, h6, p, figure, blockquote, dl, dd, ul, ol {
+  margin: 0;
+  padding: 0;
+}
+ul, ol { list-style: none; }
+
+img, svg, canvas { display: block; max-width: 100%; }
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button { background: none; border: 0; padding: 0; cursor: pointer; }
+
+a { color: inherit; text-decoration: none; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2 —— 排版基线（05 §3.2）
+   ══════════════════════════════════════════════════════════════════════════ */
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);   /* 中文正文默认 1.90，硬性值 */
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-kerning: normal;
+  font-variant-numeric: oldstyle-nums proportional-nums; /* 数字下沉，印刷品气质 */
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   3 —— 纸张底纹（05 §5.3，纯 CSS 四层叠加，零外部图片）
+   ① feTurbulence 噪点  ② 交叉纤维纹  ③ 边缘压暗  ④ 底色
+   顺序即 background 书写顺序，前面的在上层。
+   ⚠️ 纸纹是**静态**的，与动效无关 —— 即使在 reduced-motion 下也完全保留。
+   ══════════════════════════════════════════════════════════════════════════ */
+
+body {
+  background-color: var(--color-paper-1);
+
+  background-image:
+    /* ① 噪点层：SVG feTurbulence 生成的纤维颗粒。data-URI 内联，无网络请求 */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E"),
+
+    /* ② 纤维层：两道不同角度的极淡条纹，模拟纸浆的走向 */
+    repeating-linear-gradient(92deg,
+      rgba(160, 143, 114, .055) 0px,
+      rgba(160, 143, 114, .055) 1px,
+      transparent 1px, transparent 6px),
+    repeating-linear-gradient(2deg,
+      rgba(200, 186, 160, .07) 0px,
+      rgba(200, 186, 160, .07) 1px,
+      transparent 1px, transparent 9px),
+
+    /* ③ 边缘压暗：模拟纸张受潮/光照不均。大半径径向渐变，极低幅度 */
+    radial-gradient(ellipse 120% 100% at 50% 42%,
+      rgba(255, 252, 245, .55) 0%,
+      rgba(180, 162, 132, .10) 72%,
+      rgba(140, 122, 92, .17) 100%);
+
+  background-size: 180px 180px, auto, auto, 100% 100%;
+  background-blend-mode: multiply, multiply, multiply, normal;
+  background-repeat: repeat, repeat, repeat, no-repeat;
+}
+
+/* 顶层颗粒：叠在所有内容之上，把 UI 与画布统一成同一张纸（
+   来自 design/concept-home.html 的设计意图）。
+   mix-blend-mode: multiply 会让整页参与合成，因此在降级模式下直接关闭，
+   这是「降级削减动效与开销，不削减内容」的体现（P-5）。 */
+#paper-grain {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-toast);
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: .42;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)' opacity='0.35'/%3E%3C/svg%3E");
+}
+body.m-mode-static #paper-grain,
+body.m-mode-reduced #paper-grain { display: none; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   4 —— 全局焦点态（05 §9.2）
+   ⚠️ 禁止用 outline:none 而不提供替代样式
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+  z-index: 1;                       /* 防止被相邻元素遮挡轮廓 */
+}
+:focus:not(:focus-visible) { outline: none; }
+
+/* 跳转链接（Skip Link，05 §9.2）—— 默认移出视口，聚焦时滑入 */
+.m-skip {
+  position: fixed;
+  left: var(--space-4);
+  top: -100px;
+  z-index: var(--z-overlay);
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-text);
+  background: var(--color-paper-0);
+  border: var(--space-px) solid var(--color-accent);
+  border-radius: var(--radius-md);
+  transition: top 160ms var(--ease-decelerate);
+}
+.m-skip:focus { top: var(--space-4); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   5 —— 降级模式（契约 §6：mode !== 'full' 时双方动效时长按 0ms 处理）
+   ══════════════════════════════════════════════════════════════════════════ */
+
+body.m-mode-static *, body.m-mode-static *::before, body.m-mode-static *::after,
+body.m-mode-reduced *, body.m-mode-reduced *::before, body.m-mode-reduced *::after {
+  animation-duration: .01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: .01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* §10.2 的例外：覆盖层瞬时出现会造成强烈的视觉冲击，
+   因此保留一个 120ms 的交叉淡入 —— 这是唯一被允许超过 0.01ms 的降级项。 */
+body.m-mode-reduced #overlay { transition-duration: var(--dur-cross-fade) !important; }
+
+/* §10.2 / §10.3：视差移除后的静态景深补偿 —— L1 轻微模糊 + 降透明度 */
+body.m-mode-reduced #map-canvas { filter: blur(.3px); opacity: .94; }
+body.m-mode-reduced #landmark-layer { transform: none !important; }
+
+/* 系统级的 prefers-reduced-motion（05 §10.2 降级总表） */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* 纸纹保留（04 §10.3：绝不能删） */
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6 —— <noscript> 降级：极简目录页（05 §10.4）
+   不是"报错页"，是一个被设计过的完整视觉状态：纸底、宋体、识别色竖线。
+   必须沿用同一套 CSS 变量。
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* #app 是 position:fixed，会创建层叠上下文并盖住静态流内容；
+   因此目录页必须自己变成"有 z-index 的定位元素"才能被看见。
+   背景保持透明 —— 纸张底纹在 body 上，要透上来。 */
+.m-noscript {
+  position: relative;
+  z-index: var(--z-overlay);
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: var(--space-12) var(--space-8) var(--space-20);
+}
+
+.m-noscript__head { margin-bottom: var(--space-10); }
+
+.m-noscript__rule {
+  width: 32px;
+  height: var(--space-px);
+  background: var(--color-accent);   /* 朱砂短横线，像图廓上的标注线 */
+  margin-bottom: var(--space-4);
+}
+
+.m-noscript__title {
+  font-family: var(--font-display);
+  font-size: var(--text-5xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tighter);
+  color: var(--color-text);
+  margin-bottom: var(--space-4);
+}
+
+.m-noscript__sub {
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-text-secondary);
+}
+
+/* 目录列表：每项左侧 4px 识别色竖线 + 编号徽章（地图语汇，P-1） */
+.m-noscript__item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-5) var(--space-6);
+  margin-bottom: var(--space-4);
+  background: var(--color-paper-2);
+  border-left: var(--space-1) solid var(--color-line);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+.m-noscript__item[data-field="space"]  { border-left-color: var(--color-space); }
+.m-noscript__item[data-field="rhythm"] { border-left-color: var(--color-rhythm); }
+.m-noscript__item[data-field="field"]  { border-left-color: var(--color-field); }
+
+.m-noscript__badge {
+  grid-row: span 2;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  align-self: start;
+  font-family: var(--font-latin);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wide);
+  line-height: 1;
+  color: var(--color-paper-1);
+  background: var(--color-accent);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-seal);
+}
+.m-noscript__item[data-field="about"] .m-noscript__badge,
+.m-noscript__item[data-field="notes"] .m-noscript__badge {
+  background: none;
+  color: var(--color-ink-3);
+  box-shadow: none;
+}
+
+.m-noscript__name {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-text);
+}
+.m-noscript__name span {              /* 英文名：大写宽字距的小标签 */
+  margin-left: var(--space-2);
+  font-family: var(--font-latin);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.m-noscript__desc {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-text-muted);
+}
+
+.m-noscript__foot {
+  margin-top: var(--space-12);
+  padding-top: var(--space-5);
+  border-top: var(--space-px) solid var(--color-border-soft);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  letter-spacing: var(--tracking-cn);
+  color: var(--color-text-muted);
+}
+.m-noscript__sign {
+  display: block;
+  margin-top: var(--space-3);
+  font-family: var(--font-signature);
+  font-size: var(--text-md);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-secondary);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   7 —— 超宽屏图廓线（05 §8.3：>1920px 唯一为超宽屏增加的装饰，它服务于 P-2）
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@media (min-width: 1920px) {
+  #app::after {
+    content: "";
+    position: fixed;
+    inset: var(--space-12);
+    border: var(--space-px) solid var(--color-border-soft);
+    pointer-events: none;
+    z-index: var(--z-paper);
+  }
+}
+/* Unified minimal navigation and intro presentation */
+.p-bar,.f-bar,.r-room__bar,.s-city__bar{display:flex!important;align-items:center!important;justify-content:flex-start!important;grid-template-columns:none!important}
+.p-bar h2,.f-bar h2,.r-room__bar h2,.r-room__count,.s-city__identity,.s-city__readout{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important;border:0!important}
+.p-bar button,.f-bar button,.r-room__bar button,.s-city__back{gap:0!important}
+.m-intro__coordinates,.m-intro__name{display:none!important}
+.m-intro__footer{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
+.m-preloader__inner{display:flex!important;align-items:flex-start!important;justify-content:center!important}
+.m-intro__copy{margin:0!important}
+.m-preloader__track,.m-preloader__label{display:none!important}
+.p-bar button,.f-bar button,.r-room__bar button,.s-city__back{font-size:0!important}
+.p-bar button::after,.f-bar button::after,.r-room__bar button::after,.s-city__back::after{content:'返回';font-size:var(--text-sm)!important;line-height:1}
+.m-intro__name{display:initial!important}
+#terrain-preloader .m-intro__name{display:none!important}

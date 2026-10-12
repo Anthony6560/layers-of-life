@@ -1,0 +1,414 @@
+@charset "UTF-8";
+/* ============================================================================
+   tokens.css —— 设计变量唯一定义处
+   ----------------------------------------------------------------------------
+   全部数值逐字抄录自《05-UI设计规范》v1.0。
+   依据《06-开发接口契约》§1：本文件是**全站唯一的变量定义处**，
+   Agent C / Agent D 的任何组件样式中不得再出现字面 HEX 或裸像素值。
+
+   分区索引（与 05 号规范的章节号一一对应）：
+     §2.1  纸张底色系        §2.2  墨色文字系
+     §2.3  三个场的识别色     §2.5  强调色
+     §2.6  错误色            §2.7  语义色汇总
+     §3.2  字体栈            §3.3  字号阶梯
+     §3.4  行高              §3.5  字重
+     §3.6  字间距            §4.1  间距
+     §4.3  栅格              §4.4  圆角与阴影
+     §4.5  Z-index 层级      §5.1  等高线
+     §5.2  经纬网格          §7.1  缓动函数
+     §8.1  断点
+     §A    开发用派生变量（本项目新增，见文件末尾说明）
+   ============================================================================ */
+
+:root {
+  /* ══ §2.1 纸张底色系（Paper）══════════════════════════════════════════ */
+  --color-paper-0: #F7FAEF; /* 最亮。Overlay 底、作品卡底、抬起的面 */
+  --color-paper-1: #EFF3E3; /* 主纸张底色。body 背景、地图 L0 底色 */
+  --color-paper-2: #E3E9D3; /* 次级底。分区背景、笔记条底、输入区 */
+  --color-paper-3: #D3DCC0; /* 凹陷。占位图底、disabled 态、进度槽 */
+  --color-paper-4: #BFCBA8; /* 最重。经纬网主线、等高线主色 */
+  --color-rule:     #C6CFB4; /* 分隔线（1px hairline） */
+  --color-rule-soft:#DCE2CE; /* 弱分隔线（表格行、列表分隔） */
+
+  /* ══ §2.2 墨色文字系（Ink）—— 5 级灰阶 ════════════════════════════════
+     ⚠️ 使用红线（规范 §2.2）：
+       --color-ink-4     仅限 ≥24px 大字 / ≥18.66px 粗体 / 非文字描边
+       --color-ink-faint 是非文字色，禁止承载任何需要阅读的信息        */
+  --color-ink-1: #26301F;     /* 正文主色 / 标题。对比度 12.20:1 */
+  --color-ink-2: #333D28;     /* 次级文字 / 副标题 / 元信息。10.11:1 */
+  --color-ink-3: #48533A;     /* 三级文字 / 说明 / 日期 / 标签。7.23:1 */
+  --color-ink-4: #6B7857;     /* 弱文字。4.18:1 —— 仅限非正文（见红线） */
+  --color-ink-faint: #93A07D; /* 极弱。线条、箭头、图标轮廓、占位符号。非文字 */
+
+  /* 五个栏目共用主页绿系，随昼夜令牌变化；小字使用高对比度墨色档。
+     栏目通过名称与地标形状区分，不再依赖五种颜色。 */
+  --field-accent: var(--contour-color);
+  --field-accent-soft: var(--color-paper-4);
+  --field-accent-strong: var(--color-ink-2);
+  --color-space: var(--field-accent);
+  --color-space-light: var(--field-accent-soft);
+  --color-space-dark: var(--field-accent-strong);
+  --color-light: var(--field-accent);
+  --color-light-light: var(--field-accent-soft);
+  --color-light-dark: var(--field-accent-strong);
+  --color-rhythm: var(--field-accent);
+  --color-rhythm-light: var(--field-accent-soft);
+  --color-rhythm-dark: var(--field-accent-strong);
+  --color-taste: var(--field-accent);
+  --color-taste-light: var(--field-accent-soft);
+  --color-taste-dark: var(--field-accent-strong);
+  --color-field: var(--field-accent);
+  --color-field-light: var(--field-accent-soft);
+  --color-field-dark: var(--field-accent-strong);
+
+  /* ══ §2.5 强调色（Accent）═════════════════════════════════════════════ */
+  --color-accent:      #4F6B2C; /* 深抹茶。S=59%，v2.2 起整体转墨绿 */
+  --color-accent-soft: #7A9455; /* 悬停态 / 浅底 */
+  --color-accent-wash: #E4EBD4; /* 选中行底色 */
+
+  /* ══ §2.6 错误色（Error）—— 唯一豁免饱和度上限 ═══════════════════════ */
+  --color-error:      #8E2F22; /* S=61%，唯一突破饱和度天花板的颜色 */
+  --color-error-soft: #C08070;
+  --color-error-wash: #F2E2DE;
+
+  /* ══ §2.7 语义色汇总（组件中应直接引用这一层）═════════════════════════ */
+  --color-bg:             var(--color-paper-1);
+  --color-bg-raised:      var(--color-paper-0);
+  --color-bg-sunken:      var(--color-paper-2);
+  --color-bg-deep:        var(--color-paper-3);
+  --color-text:           var(--color-ink-1);
+  --color-text-secondary: var(--color-ink-2);
+  --color-text-muted:     var(--color-ink-3);
+  --color-text-faint:     var(--color-ink-4);
+  --color-border:         var(--color-rule);
+  --color-border-soft:    var(--color-rule-soft);
+  --color-line:           var(--color-ink-faint);
+  --color-focus:          var(--color-accent);
+
+  /* 深色面板（Overlay 顶栏 / 页脚倒置块）—— 对应《04》mermaid 的 #5c4a35 */
+  --color-panel-deep:      #333D28;
+  --color-panel-deep-soft: #48533A;
+  --color-on-panel:        #EFF3E3; /* 对 #333D28 对比度 9.60:1 ✅ */
+  --color-on-panel-muted:  #D3DCC0; /* 对 #333D28 对比度 8.13:1 ✅ */
+
+  /* ══ §3.2 字体栈（全部系统字体，禁止任何外部字体 CDN）═════════════════ */
+  /* ① 中文正文栈：宋体系（杂志感来源）
+     禁止把 "SimSun" 放在最前：Windows 的 SimSun 在小字号下笔画发虚 */
+  --font-cn-serif:
+    "Source Han Serif SC", "Noto Serif CJK SC", "Noto Serif SC",
+    "Songti SC", "STSong", "SimSun", "宋体",
+    "WenQuanYi Zen Hei", serif;
+
+  /* ② 中文无衬线栈：仅用于控件与极小字号（宋体在 11px 下不可读） */
+  --font-cn-sans:
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑",
+    "Heiti SC", "WenQuanYi Micro Hei", sans-serif;
+
+  /* ③ 西文衬线栈：用于 SPACE / RHYTHM / FIELD 等英文展示标题 */
+  --font-en-serif:
+    "Palatino Linotype", "Palatino", "Book Antiqua",
+    "Georgia", "Times New Roman", "Songti SC", serif;
+
+  /* ④ 手写体签名栈：楷体系。仅用于页脚签名与引语 */
+  --font-signature:
+    "Kaiti SC", "STKaiti", "KaiTi", "楷体", "KaiTi_GB2312",
+    "TW-Kai", "Songti SC", serif;
+
+  /* ⑤ 等宽栈：坐标、比例尺刻度、JSON 错误提示 */
+  --font-mono:
+    "SFMono-Regular", "SF Mono", "Consolas", "Menlo",
+    "Liberation Mono", "Courier New", monospace;
+
+  /* 组合栈（实际使用这一层） */
+  --font-body:    var(--font-cn-serif);   /* 全站默认 */
+  --font-display: var(--font-cn-serif);   /* 中文大标题 */
+  --font-latin:   var(--font-en-serif);   /* 英文展示字 */
+  --font-ui:      var(--font-cn-sans);    /* 控件、标签、11-13px 小字 */
+
+  /* ══ §3.3 字号阶梯（比约 1.25，大三度音程）════════════════════════════ */
+  --text-2xs:  10px;                        /* 极小标记：地标编号、比例尺刻度 */
+  --text-xs:   11px;                        /* 大写英文标签、场代码 */
+  --text-sm:   13px;                        /* 元信息、日期、标签、图注 */
+  --text-base: 16px;                        /* 正文基准 */
+  --text-md:   18px;                        /* 引导句、笔记正文 */
+  --text-lg:   21px;                        /* 卡片标题、Overlay 小标题 */
+  --text-xl:   26px;                        /* 分段大标题、场地名 */
+  --text-2xl:  32px;                        /* Overlay 主标题 */
+  --text-3xl:  40px;                        /* 场中文名（详情页眉） */
+  --text-4xl:  clamp(44px, 5.0vw, 56px);    /* 关于页主标题 */
+  --text-5xl:  clamp(56px, 7.0vw, 76px);    /* Hero 中文标题 */
+  --text-6xl:  clamp(72px, 10vw, 112px);    /* 地标编号大水印 / 装饰字 */
+
+  /* ══ §3.4 行高 ═════════════════════════════════════════════════════════
+     中文正文的 1.90 不是可选偏好，是硬性值（宋体字面小、字重轻）      */
+  --leading-tight:   1.25; /* 展示型大标题（≥32px） */
+  --leading-snug:    1.45; /* 中文小标题（21-26px） */
+  --leading-normal:  1.70; /* UI 控件、列表项、表单 */
+  --leading-relaxed: 1.90; /* ★ 中文正文默认 */
+  --leading-loose:   2.10; /* 笔记正文、引语、关于页长段 */
+
+  /* ══ §3.5 字重 ═════════════════════════════════════════════════════════
+     ⚠️ 中文宋体只有 400 / 700 两个真实字重。
+        --weight-medium / --weight-semi 只允许用在 --font-latin / --font-ui 上 */
+  --weight-regular: 400;
+  --weight-medium:  500;
+  --weight-semi:    600;
+  --weight-bold:    700;
+
+  /* ══ §3.6 字间距 ═══════════════════════════════════════════════════════ */
+  --tracking-tighter: -0.02em; /* ≥56px 的中文大标题，收紧避免松散 */
+  --tracking-tight:   -0.01em; /* 32-40px 中文标题 */
+  --tracking-normal:   0;      /* 正文 */
+  --tracking-cn:       0.02em; /* 13px 及以下的中文小字 */
+  --tracking-wide:     0.06em; /* 中文副标题 */
+  --tracking-wider:    0.14em; /* 英文小标签 */
+  --tracking-widest:   0.30em; /* 英文展示字（大写 + 宽字距 = 图廓标准排法） */
+
+  /* ══ §4.1 间距（基础单位 --space-1 = 4px；后缀 = px ÷ 4）══════════════ */
+  --space-0:  0;
+  --space-px: 1px;   /* 描边专用 */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  --space-32: 128px;
+  --space-40: 160px;
+
+  /* ══ §4.3 栅格 ════════════════════════════════════════════════════════ */
+  --grid-columns: 12;
+  --grid-gutter:  var(--space-6);   /* 24px */
+  --layout-max:   1440px;           /* 内容最大宽度 */
+  --measure:      34em;             /* 正文单行最大宽度，约 544px / 34 个汉字 */
+  --overlay-w:    720px;            /* 桌面端 Overlay 宽度 */
+
+  /* ══ §4.4 圆角与阴影（圆角上限 4px；阴影禁止纯黑）════════════════════ */
+  --radius-none: 0;
+  --radius-sm:   2px;
+  --radius-md:   3px;   /* 默认。卡片、按钮、标签 */
+  --radius-lg:   4px;   /* 上限。Overlay 面板 */
+  /* 禁止 > 4px 的圆角 */
+
+  --shadow-none: none;
+  --shadow-sm: 0 1px 2px rgba(61, 50, 38, .05);
+  --shadow-md: 0 2px 12px rgba(61, 50, 38, .06);
+  --shadow-lg: 0 8px 32px rgba(61, 50, 38, .09);  /* Overlay 抬起 */
+  --shadow-seal: 0 1px 0 rgba(61, 50, 38, .12);   /* 印章式硬边投影 */
+
+  /* ══ §4.5 Z-index 层级（对应《04》§6 的 L0–L6）═══════════════════════ */
+  --z-paper:    0;   /* L0 纸张底纹 + 经纬网格 */
+  --z-contour:  10;  /* L1 等高线 */
+  --z-landmark: 20;  /* L2 地标 */
+  --z-label:    30;  /* L3 地标标注 */
+  --z-control:  40;  /* L4 缩放控件 / 比例尺 / 引导文案 */
+  --z-overlay:  50;  /* L5 覆盖层（场域内容 / 作品详情） */
+  --z-toast:    60;  /* L6 全局提示（错误 / 引导）/ 顶层纸张颗粒 */
+
+  /* ══ §5.1 等高线（Contour Lines）══════════════════════════════════════ */
+  --contour-color:        #3F4A35;   /* v2.3 抹茶系。原 #A08F72 是暖棕，在抹茶纸底上偏色 */
+  --contour-width:        1.4px;     /* 首曲线（普通）。v2.3 由 1px 加粗——用户反馈太细、与底图区分不足 */
+  --contour-width-index:  2.2px;     /* 计曲线（每 5 条加粗一条） */
+  --contour-opacity:      .58;       /* 普通线是地图主视觉，保持清晰但不压过地标 */
+  --contour-opacity-index:.84;       /* 计曲线建立明确的地形层级 */
+  --contour-spacing:      34px;      /* 相邻等高线的基准间距（世界坐标） */
+  --contour-spacing-near: 18px;      /* 靠近地标 A 时的加密间距 */
+  --contour-step:         9;         /* 每个等高线簇的环数 */
+  --contour-index-every:  5;         /* 每 5 环加粗一次 */
+  --contour-wobble:       .16;       /* 半径扰动幅度（0-1），防止出现完美圆 */
+  --contour-period:       24000ms;   /* 流动周期 */
+  --contour-drift-x:      6px;       /* §5.1 簇心漂移：水平幅度（统一向右） */
+  --contour-drift-y:      8px;       /* §5.1 簇心漂移：垂直幅度（统一向上） */
+
+  /* ══ §5.3 地形（v2.0 内容驱动的高度场）═════════════════════════════════
+     地形参数（σ / 权重 / 等高距 / tilt / VE / 网格数）不在这里 ——
+     它们属于**内容**，放在 assets/data/site.data.js 的 terrain 块里，
+     由 docs/08 §4 规定。此处只有纯视觉项：山体阴影的两个色端与透明度。 */
+  --terrain-shade-light: var(--color-paper-0); /* 受光面：最亮的纸色 */
+  --terrain-shade-dark:  var(--color-paper-4); /* 背光面：最重的纸色 */
+  --terrain-shade-alpha: .10;                  /* docs/08 §4.5：≤0.10，只暗示起伏 */
+
+  /* ---- 半透明晕渲地形曲面（docs/10 §4，v2.4）--------------------------------
+     取代 v2.3 的地层板。水平板在低俯仰角下投影面积趋零、地形会「消失」；
+     曲面从任何角度都有体积。明暗由逐格 Lambert 光照 + 按亮度分桶填充实现。 */
+  --terrain-surface:            #A8B893;  /* 曲面基色。实际填充色按光照在冷暗↔亮之间插值 */
+  --terrain-surface-shade-dark: #5E7050;  /* 背光面（西北光源，东南坡为此色） */
+  --terrain-surface-shade-light:#E4EBD6;  /* 受光面 */
+  --terrain-surface-alpha:      .38;      /* 曲面只承担起伏提示，让位于等高线 */
+  --terrain-surface-alpha-top:  .52;      /* 峰顶保留轻微晕渲，不做实体山体感 */
+  --terrain-surface-grid:       160;      /* 与高度场同级，避免低分辨率四边形显形 */
+  --terrain-surface-fade-start: .006;     /* 全域阴影从近零高度开始淡入，隐藏矩形边界 */
+  --terrain-surface-fade-end:   .09;      /* 达到此高度后使用完整阴影强度 */
+  --terrain-cast-shadow-strength:.34;     /* 稍加重投影，仍低于海拔底色的视觉权重 */
+  --terrain-light-contrast:     1.20;     /* 保留坡向，但避免阳面/阴面成为唯一色差 */
+  --terrain-slope-dark-opacity: .20;
+  --terrain-slope-light-opacity:.08;
+  /* 合成模糊半径（px，设备像素）。
+     曲面是逐格平面着色 —— 相邻格亮度落在不同桶里会形成肉眼可见的方格。
+     模糊只作用于曲面图层，等高线在之后绘制，因此线条保持锐利。 */
+  --terrain-surface-blur:       8;
+
+  /* 远景山体：更低对比、更低起伏，避免抢主体视觉。 */
+  --ambient-surface:             #779064;
+  --ambient-surface-low:         #36543B;
+  --ambient-surface-high:        #EDF3E3;
+  --ambient-surface-shade-dark:  #354F32;
+  --ambient-surface-shade-light: #D5E1C9;
+  --ambient-surface-alpha:       .68;
+  --ambient-surface-alpha-top:   .82;
+  --ambient-surface-grid:        160;
+  --ambient-surface-blur:        10;
+
+  /* 合成地形的远景段：与主体共用几何，视觉层级必须弱于内容山。 */
+  --ambient-contour-color:         #69745C;
+  --ambient-contour-width:         0.95px;
+  --ambient-contour-width-index:   1.40px;
+  --ambient-contour-opacity:       .30;
+  --ambient-contour-opacity-index: .44;
+
+  /* ══ §5.2 经纬网格（Graticule）════════════════════════════════════════ */
+  --grid-minor-step:    64px;    /* 世界坐标下的网格间距 */
+  --grid-major-every:   4;       /* 每 4 格一条主线 */
+  --grid-minor-width:   0.75px;
+  --grid-major-width:   1px;
+  --grid-minor-color:   #C9D2B8;
+  --grid-major-color:   #C9D2B8;
+  --grid-minor-opacity: .30;
+  --grid-major-opacity: .50;
+  --grid-minor-hide-below: 24px; /* §5.2 约束：视觉间距 < 24px 时隐藏普通网格 */
+  --grid-node-size: 2px;         /* §5.2 交点标记：主线交点 2×2px 实心方点 */
+  --grid-node-opacity: .35;      /* §5.2 交点标记透明度 */
+  --grid-dim-opacity: .12;       /* §7.3 步 3：内容登场时网格退让到 .12 */
+
+  /* ══ §7.1 缓动函数（全站统一，不得随意新增）══════════════════════════ */
+  --ease-standard:   cubic-bezier(.22, .61, .36, 1);   /* 出场 / 淡入淡出 */
+  --ease-decelerate: cubic-bezier(.00, .00, .20, 1);   /* 进入视口 */
+  --ease-accelerate: cubic-bezier(.40, .00, 1.00, 1);  /* 离开视口 */
+  --ease-camera:     cubic-bezier(.65, .00, .35, 1);   /* ★ 镜头运动专用 */
+  --ease-expand:     cubic-bezier(.33, 1.00, .68, 1);  /* 详情展开 */
+  --ease-linear:     linear;                            /* 仅等高线相位 */
+
+  /* ══ §8.1 响应式断点 ══════════════════════════════════════════════════ */
+  --bp-desktop: 1200px;
+  --bp-tablet:  768px;
+
+  /* ════════════════════════════════════════════════════════════════════════
+     §A 开发用派生变量
+     ------------------------------------------------------------------------
+     以下变量**不是** 05 号规范新增的设计决策，而是把规范中已经写死的
+     数值/时序**提取成变量**，以便：
+       ① Canvas 绘制能从 CSS 读到参数（避免在 JS 里硬编码色值与像素）；
+       ② 镜头与覆盖层的时序有唯一真相源（契约 §6 动效契约）。
+     每一项都标注了它在规范中的出处，数值与出处完全一致。
+     ════════════════════════════════════════════════════════════════════════ */
+
+  /* ---- 镜头（PRD §4.1.2「缩放范围锁定 0.6x ~ 2.5x」）---- */
+  --scale-min:   .6;    /* PRD §4.1.2 缩放下限 */
+  --scale-max:   2.5;   /* PRD §4.1.2 缩放上限 */
+  --scale-focus: 1.6;   /* 05 §7.3 步 4：聚焦时相机 scale 1.0 → 1.6 */
+
+  /* ---- 地图平面（05 §5.6 落位公式：MAP_W = viewportWidth × 1.30）---- */
+  --map-overscan: 1.45; /* 地形和等高线在视口外继续铺展，避免边缘露空 */
+
+  /* ---- 视差幅度（05 §7.4 视差分层表；04 §6 分层规则）---- */
+  --parallax-l1: 6px;   /* L0–L1 纸张底纹 + 网格 + 等高线，反向，±6px */
+  --parallax-l2: 14px;  /* L2–L3 地标图形 + 标注，同向，±14px */
+  --parallax-lerp: .08; /* 每帧 lerp 系数，60fps 下约 130ms 收敛 */
+
+  /* ---- 动效时长（契约 §6 动效契约 / 05 §7.2 动效总表）---- */
+  --dur-camera:        600ms; /* 镜头推进 / 拉回。easeInOutCubic */
+  --dur-overlay-in:    280ms; /* 覆盖层淡入。ease-out */
+  --dur-overlay-out:   200ms; /* 覆盖层淡出。ease-in（契约 §6） */
+  --dur-landmark-in:   160ms; /* 地标悬停放大。05 §7.2 A-04 */
+  --dur-landmark-out:  200ms; /* 地标移出（出比入慢，避免闪烁） */
+  --dur-toast-in:      320ms; /* A-16 降级提示条滑入 */
+  --dur-toast-out:     280ms; /* A-16 自动滑出 */
+  --dur-drag-hint:     2400ms;/* A-17 首次拖拽引导（1200ms 去 + 1200ms 回） */
+  --dur-cross-fade:    120ms; /* §10.2：reduced-motion 下唯一被允许的过渡 */
+
+  /* ---- 行为时序（05 §7.2 / §10.2）---- */
+  --toast-dwell:        4000ms; /* A-16 提示条停留时间 */
+  --toast-dwell-static: 8000ms; /* §10.2：降级态停留时间延长到 8s */
+  --drag-hint-delay:    2500ms; /* A-17：首屏加载后 2.5s 触发 */
+  --perf-probe-window:  3000ms; /* 契约 §0 / 04 §4.2：连续采样 3 秒 */
+  --perf-fps-threshold: 25;     /* 调试参考值；预计算循环不再自动降级 */
+
+  /* ---- 地标尺寸（05 §5.4 地标尺寸汇总表，单位 px，供 JS 与 CSS 共用）----
+     v2.0：场由 3 个扩到 5 个，B–E 的编号顺延为 B/C/D/E（docs/08 §三），
+     新增 light / taste 两个场（光圈、涡旋），沿用场级基准尺寸 88。 */
+  --mark-art-space:  88; /* A 空间：等高线簇外接盒 88×88 */
+  --mark-art-light:  88; /* B 光影：光圈叶片 + 取景框 88×88 */
+  --mark-art-rhythm: 92; /* C 节奏：脉冲点阵含脉冲弧 92×92 */
+  --mark-art-taste:  88; /* D 味道：香气涡旋 88×88 */
+  --mark-art-field:  96; /* E 场：扇形射线 96×96 */
+  --mark-art-about:  48; /* F 关于：十字 + 圆 48×48 */
+  --mark-art-notes:  40; /* G 印记：三刻痕 40×40 */
+  --mark-hit-abc:    104;/* 五个场的命中热区 104×104 */
+  --mark-hit-de:     64; /* 关于 / 印记的命中热区 64×64 */
+  --mark-label-gap:  14px; /* 图形外缘到引出线的距离（05 §5.5 标注锚定 ±24px） */
+
+  /* ---- 覆盖层尺寸（05 §6.3 断点表 / §4.3）---- */
+  --overlay-bar-h:  64px;
+  --overlay-shadow: none; /* 用渐变边缘衔接地图，不制造浮窗阴影 */
+}
+
+/* 夜间模式：保持同一套语义令牌，Canvas 与 DOM 会同步换色。 */
+:root.m-theme-night {
+  --color-paper-0: #242C25;
+  --color-paper-1: #171E19;
+  --color-paper-2: #202920;
+  --color-paper-3: #2B352B;
+  --color-paper-4: #465347;
+  --color-rule: #3B493D;
+  --color-rule-soft: #2E392F;
+  --color-ink-1: #EDF1E5;
+  --color-ink-2: #D6DDCF;
+  --color-ink-3: #B3BEAC;
+  --color-ink-4: #8F9C89;
+  --color-ink-faint: #687665;
+  --color-accent: #A7BD7D;
+  --color-accent-soft: #849C62;
+  --color-accent-wash: #34402F;
+  --color-panel-deep: #101611;
+  --color-panel-deep-soft: #263128;
+  --color-on-panel: #EDF1E5;
+  --color-on-panel-muted: #BFCAB8;
+  --contour-color: #AAB79E;
+  --terrain-surface: #485744;
+  --terrain-surface-shade-dark: #253229;
+  --terrain-surface-shade-light: #83927A;
+  --ambient-surface: #354239;
+  --ambient-surface-low: #1F2C24;
+  --ambient-surface-high: #82937C;
+  --ambient-surface-shade-dark: #202A24;
+  --ambient-surface-shade-light: #657260;
+  --ambient-contour-color: #73816E;
+  --grid-minor-color: #465347;
+  --grid-major-color: #465347;
+}
+
+/* ----------------------------------------------------------------------------
+   prefers-reduced-motion：降级态的**变量级**补偿（05 §10.3 降级态的额外视觉调整）
+   削减动效，不削减内容与功能。纸纹是静态的，绝不删除。
+   ---------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --contour-opacity:       .48;  /* §10.3：静态画面需要更明确的线条 */
+    --contour-width-index:   2.6px;/* §10.3：计曲线加粗 */
+    --grid-minor-opacity:    .34;  /* §10.3：经纬网不透明度提升 */
+    --grid-major-opacity:    .56;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   <768px 移动端：字号基准改为 15px，全站等比缩放（05 §8.1）
+   ---------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  :root { font-size: 93.75%; }   /* 16px → 15px */
+}
