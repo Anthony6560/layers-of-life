@@ -4,10 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>坐标之外 · Layers of Life</title>
+  <script>
+    // Suppress the introduction before the first paint on a valid inner-page URL.
+    if (/^#\/field\/(space|light|rhythm|taste|field)$/.test(location.hash)) {
+      document.documentElement.classList.add('m-skip-intro');
+    }
+  </script>
 
   <!-- 样式：tokens 必须最先，其余顺序不限（契约 §3.4） -->
   <link rel="stylesheet" href="css/tokens.css?v=20261007-green-panels">
-  <link rel="stylesheet" href="css/base.css?v=20261012-text-back">
+  <link rel="stylesheet" href="css/base.css?v=20261012-intro-entry">
   <link rel="stylesheet" href="css/map.css?v=20261007-peak-original-labels">
   <link rel="stylesheet" href="css/content.css?v=20261012-text-back">   <!-- Agent D -->
   <link rel="stylesheet" href="css/space-city.css?v=20261012-text-back">
@@ -48,13 +54,13 @@
       <p data-intro-line>你可以从任何一座山峰开始，认识坐标之外的我。</p>
     </div>
     <div class="m-intro__footer">
-      <div class="m-intro__loading">
+      <div class="m-intro__loading" hidden>
         <span id="terrain-preloader-label" class="m-preloader__label" role="status">地图准备中</span>
         <div class="m-preloader__track" aria-hidden="true"><i id="terrain-preloader-progress"></i></div>
       </div>
       <div class="m-intro__actions">
-        <button id="intro-show-all" class="m-intro__skip" type="button">显示全文</button>
-        <button id="intro-enter" class="m-intro__enter" type="button" disabled>进入地图 <span aria-hidden="true">↗</span></button>
+        <button id="intro-show-all" class="m-intro__skip" type="button" hidden>显示全文</button>
+        <button id="intro-enter" class="m-intro__enter" type="button" hidden disabled>开始吧</button>
       </div>
     </div>
   </div>
@@ -200,13 +206,13 @@
 <script src="js/terrain.js?v=20261012-worker"></script>
 <script src="js/landmarks.js?v=20261007-unified-orbit"></script>
 <script src="js/terrain-orbit.js?v=20261012-gpu-preload"></script>
-<script src="js/map-engine.js?v=20261012-worker"></script>
+<script src="js/map-engine.js?v=20261012-intro-entry"></script>
 <script src="js/terrain-precompute.js?v=20261012-worker"></script>
 <script src="js/camera.js?v=20261007-unified-orbit"></script>
 
 <!-- 5. 启动器：必须最后 -->
-<script src="js/intro-screen.js?v=20261012-isolated-type"></script>
-<script src="js/app.js?v=20261012-parallel-preload"></script>
+<script src="js/intro-screen.js?v=20261012-intro-entry"></script>
+<script src="js/app.js?v=20261012-intro-entry"></script>
 </body>
 </html>
 <style id="minimal-interface-overrides">
@@ -214,7 +220,6 @@
   .p-bar h2,.f-bar h2,.r-room__bar h2,.r-room__count,.s-city__identity,.s-city__readout{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important;border:0!important}
   .p-bar button,.f-bar button,.r-room__bar button,.s-city__back{font-size:var(--text-sm)!important;line-height:1}
   .m-intro__coordinates,.m-intro__name{display:none!important}
-  .m-intro__footer{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
 </style>
 <script>
 (function(){

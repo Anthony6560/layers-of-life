@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
   var host, lines = [], row = 0, count = 0, timer = 0, due = 0, pausedAt = 0;
-  var finished = false, dismissed = false, enter, showAll, onEnter;
+  var finished = false, dismissed = false, skipped = false, enter, showAll, onEnter;
   var enterDue = 0, enterTimer = 0;
   var completionCallbacks = [];
   var blocked = [], motion;
@@ -16,7 +16,7 @@
   function type() {
     timer = 0;
     if (finished || dismissed) return;
-    // Reveal one character per callback; scene preparation starts after typing.
+    // Reveal one character per callback, independently of scene preparation.
     var line = lines[row], char = line.chars[count];
     count++;
     paint(line, count);
@@ -42,7 +42,7 @@
   function flushCompletion() {
     if (!finished || !completionCallbacks.length) return;
     var callbacks = completionCallbacks.splice(0);
-    // Paint the last character before starting any expensive scene work.
+    // Let the final character paint before notifying observers.
     global.requestAnimationFrame(function () {
       global.setTimeout(function () { callbacks.forEach(function (callback) { callback(); }); }, 0);
     });
@@ -67,13 +67,15 @@
     }
   }
   function preference() { if (motion.matches) complete(); }
-  function dismiss() {
-    if (!onEnter || dismissed || !finished || performance.now() < enterDue) return;
+  function dismiss(manual) {
+    if (!onEnter || dismissed || (!manual && (!finished || performance.now() < enterDue))) return;
     dismissed = true;
+    global.clearTimeout(timer); timer = 0;
     global.clearTimeout(enterTimer); enterTimer = 0;
+    if (!finished) { finished = true; host.dataset.typing = 'skipped'; flushCompletion(); }
     var moveFocus = host.contains(document.activeElement);
     document.removeEventListener('visibilitychange', visibility);
-    motion.removeEventListener('change', preference);
+    if (motion) motion.removeEventListener('change', preference);
     blocked.forEach(function (item) { item.el.inert = item.before; });
     host.dataset.state = 'ready';
     host.setAttribute('aria-hidden', 'true');
@@ -82,12 +84,24 @@
     var map = document.getElementById('landmark-layer');
     if (map && moveFocus) map.focus({ preventScroll: true });
   }
-  function start() {
+  function start(options) {
     if (host) return;
     host = document.getElementById('terrain-preloader');
     if (!host) { finished = true; flushCompletion(); return; }
     enter = document.getElementById('intro-enter');
     showAll = document.getElementById('intro-show-all');
+    skipped = !!(options && options.skip);
+    document.documentElement.classList.toggle('m-skip-intro', skipped);
+    blocked = Array.prototype.map.call(document.querySelectorAll('#app, .m-skip'), function (el) {
+      var before = el.inert; el.inert = true; return { el: el, before: before };
+    });
+    if (skipped) {
+      finished = true; enterDue = 0;
+      host.dataset.typing = 'skipped';
+      host.setAttribute('aria-hidden', 'true');
+      flushCompletion();
+      return;
+    }
     lines = Array.prototype.map.call(host.querySelectorAll('[data-intro-line]'), function (element) {
       var text = element.textContent;
       element.setAttribute('aria-label', text);
@@ -99,11 +113,8 @@
       element.appendChild(visible); element.appendChild(caret); element.appendChild(remaining);
       return { chars: Array.from(text), visible: visible, remaining: remaining, caret: caret };
     });
-    blocked = Array.prototype.map.call(document.querySelectorAll('#app, .m-skip'), function (el) {
-      var before = el.inert; el.inert = true; return { el: el, before: before };
-    });
     showAll.addEventListener('click', complete);
-    enter.addEventListener('click', dismiss);
+    enter.addEventListener('click', function () { dismiss(true); });
     motion = global.matchMedia('(prefers-reduced-motion: reduce)');
     motion.addEventListener('change', preference);
     document.addEventListener('visibilitychange', visibility);
@@ -118,6 +129,7 @@
     onEnter = callback;
     host.dataset.state = 'prepared';
     enter.disabled = false;
+    enter.hidden = skipped;
     maybeEnter();
   }
   global.IntroScreen = { start: start, ready: ready, whenComplete: whenComplete };

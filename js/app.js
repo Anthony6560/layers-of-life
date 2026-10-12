@@ -137,6 +137,7 @@
     var enterScene = function () {
       state.mode = "";
       applyMode(mode, false);
+      if (Engine.resume) Engine.resume("intro");
       if (!hasData) { renderErrorCard(); }
       if (Engine.isRunning()) { Engine.requestFrame(); } else { Engine.renderStatic(); }
       emit("scene:ready", {});
@@ -746,6 +747,74 @@
   /* ---- 深链接（PRD §3.2：URL hash 记录当前位置，P1 需求）---- */
 
   var HASH_RE = /^#\/field\/([a-z]+)$/;
+  var PAGE_STATE_KEY = "layers-of-life-page-v1";
+
+  function currentFieldFromHash() {
+    var match = HASH_RE.exec(window.location.hash || "");
+    return match && site && site.fields && site.fields.some(function (field) { return field.id === match[1]; }) ? match[1] : null;
+  }
+
+  // Only resume a room saved by a refresh in this tab and at this exact URL.
+  function readRefreshPage() {
+    try {
+      var navigation = performance.getEntriesByType("navigation")[0];
+      if (!navigation || navigation.type !== "reload") return null;
+      var saved = JSON.parse(window.sessionStorage.getItem(PAGE_STATE_KEY) || "null");
+      window.sessionStorage.removeItem(PAGE_STATE_KEY);
+      return saved && saved.url === window.location.href ? saved : null;
+    } catch (e) { return null; }
+  }
+
+  function rememberPage() {
+    try {
+      var id = currentFieldFromHash();
+      if (!id) { window.sessionStorage.removeItem(PAGE_STATE_KEY); return; }
+      var saved = { url: window.location.href, field: id };
+      if (id === "field" && window.FieldRoom && window.FieldRoom.isOpen()) {
+        saved.room = "field";
+        saved.section = $("field-room").dataset.section;
+      } else if ((id === "light" || id === "taste") && window.MomentsRoom && window.MomentsRoom.isOpen()) {
+        saved.room = id;
+      } else if (id === "rhythm" && window.RhythmPlayer && window.RhythmPlayer.isOpen()) {
+        saved.room = "rhythm";
+        var track = document.querySelector('[data-r-track][aria-current="true"]');
+        saved.track = track ? Number(track.dataset.rTrack) : 0;
+      } else if (id === "space" && window.SpaceCity && window.SpaceCity.isOpen()) {
+        saved.room = "space";
+        if (window.CityCheckup && window.CityCheckup.isActive()) {
+          saved.project = "checkup"; saved.chapter = window.CityCheckup.inspect().chapter;
+        } else if (window.ConvenienceStoreCube && window.ConvenienceStoreCube.isActive()) {
+          saved.project = "convenience"; saved.chapter = window.ConvenienceResearch.inspect().chapter;
+        }
+      }
+      window.sessionStorage.setItem(PAGE_STATE_KEY, JSON.stringify(saved));
+    } catch (e) { /* Storage restrictions must not prevent navigation. */ }
+  }
+
+  function restoreRoom(saved) {
+    if (saved.room === "field" && window.FieldRoom) {
+      window.FieldRoom.open();
+      var section = document.querySelector('[data-f-section="' + saved.section + '"]');
+      if (section) section.click();
+    } else if ((saved.room === "light" || saved.room === "taste") && window.MomentsRoom) {
+      window.MomentsRoom.open(saved.room);
+    } else if (saved.room === "rhythm" && window.RhythmPlayer) {
+      var tracks = works.filter(function (work) { return work.field === "rhythm" && work.media && work.media.src; });
+      window.RhythmPlayer.open(tracks[saved.track] && tracks[saved.track].id);
+    } else if (saved.room === "space" && window.SpaceCity) {
+      window.SpaceCity.open();
+      var project = document.querySelector('[data-project-id="' + saved.project + '"]');
+      if (project) { project.click(); project.click(); }
+      if (saved.project === "convenience" && window.ConvenienceResearch) window.ConvenienceResearch.setChapter(saved.chapter);
+      if (saved.project === "checkup") {
+        var chapter = document.querySelector('[data-checkup-jump="' + saved.chapter + '"]');
+        if (chapter) chapter.click();
+      }
+    }
+  }
+
+  window.addEventListener("pagehide", rememberPage);
+  window.addEventListener("beforeunload", rememberPage);
 
   function writeHash(id) {
     try { window.history.replaceState(null, "", "#/field/" + id); } catch (e) { /* file:// 下忽略 */ }
@@ -758,7 +827,16 @@
   function restoreFromHash() {
     var m = HASH_RE.exec(window.location.hash || "");
     if (!m) { return; }
-    if (Lm && Lm.has(m[1])) { openLandmark(m[1]); }
+    if (Lm && Lm.has(m[1])) {
+      var saved = readRefreshPage();
+      if (saved && saved.field === m[1] && saved.room) {
+        var off = on("overlay:open", function (event) {
+          if (event.id !== saved.field) return;
+          off(); restoreRoom(saved);
+        });
+      }
+      openLandmark(m[1]);
+    }
   }
 
   /* ══════════════════════════════════════════════════════════════════════════
@@ -888,6 +966,7 @@
 
   function startIntroduction() {
     configurePreviewClock();
+    if (Engine.suspend) Engine.suspend("intro");
     // CPU preparation runs concurrently in a worker. GPU uploads are batched
     // between typing callbacks, so both caches are warm before the text finishes.
     if (Environment && Environment.getLight) { applyEnvironmentTheme(Environment.getLight()); }
@@ -896,16 +975,11 @@
       if (!cycle || !window.TerrainOrbit || !window.TerrainOrbit.prepareFramesAsync) return cycle;
       return window.TerrainOrbit.prepareFramesAsync(cycle.frames).then(function () { return cycle; });
     });
-    function preparedBoot() {
-      preparation.then(function (cycle) {
-        if (cycle) Engine.adoptTerrainData(cycle);
-        boot();
-      });
-    }
-    if (window.IntroScreen) {
-      window.IntroScreen.start();
-      window.IntroScreen.whenComplete(preparedBoot);
-    } else { preparedBoot(); }
+    if (window.IntroScreen) window.IntroScreen.start({ skip: !!currentFieldFromHash() });
+    preparation.then(function (cycle) {
+      if (cycle) Engine.adoptTerrainData(cycle);
+      boot();
+    });
   }
 
   if (document.readyState === "loading") {

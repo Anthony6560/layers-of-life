@@ -2541,6 +2541,9 @@
      ══════════════════════════════════════════════════════════════════════════ */
 
   function paint(translateX, translateY, now) {
+    // Suspended rooms still prepare resources, but never draw a hidden full
+    // viewport. Canvas/WebGL compositing here would block introduction typing.
+    if (!rasterizing && suspensions.size) { return; }
     // Until cached geometry is uploaded, the home is hidden by the intro.
     // Do not render several expensive CPU fallback frames during boot.
     if (initialWorkerCycle && !rasterCache.ready && !rasterizing) { return; }
@@ -3008,7 +3011,7 @@
     notifyPreload({
       phase: rasterCache.ready ? "raster" : "terrain",
       progress: rasterCache.ready ? 1 : 0,
-      ready: rasterCache.ready
+      ready: rasterCache.ready && shadowRasterCache.ready
     });
     var unified = ensureCombinedContours(Date.now());
     if (unified && combinedContourCache.ready) { startRasterPreload(); }
