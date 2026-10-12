@@ -37,6 +37,7 @@
       '<div class="f-lightbox" role="dialog" aria-modal="true" aria-label="照片浏览" hidden><div class="f-lightbox__bar"><span data-f-photo-count></span><button type="button" data-f-action="photo-close" aria-label="关闭照片">关闭 ×</button></div>' +
       '<button class="f-photo-prev" type="button" data-f-action="photo-prev" aria-label="上一张照片">←</button><figure><img alt=""><figcaption></figcaption></figure><button class="f-photo-next" type="button" data-f-action="photo-next" aria-label="下一张照片">→</button></div></section>');
     state.shell=document.getElementById('field-room');
+    if(global.PhotoGestures)global.PhotoGestures.attach(find('.f-lightbox img'),{previous:function(){showPhoto(state.photo-1);},next:function(){showPhoto(state.photo+1);}});
     state.shell.querySelectorAll('.f-field-lines path, .f-cad-lines path').forEach(function(path){path.setAttribute('pathLength','1');});
     state.shell.addEventListener('click',function(e){
       var section=e.target.closest('[data-f-section]'); if(section){select(section.dataset.fSection);return;}
@@ -88,7 +89,7 @@
   function pendant() {
     return chapterHeading('pendant') +
       '<section class="f-pendant-model" aria-label="断棒挂件三维展示">' +
-      '<div class="f-pendant-view"><canvas aria-label="断棒挂件：按住左键拖拽旋转，滚轮缩放"></canvas><img class="f-pendant-fallback" src="assets/media/field/pendant/front-01.svg" alt="挂件正面CAD雕刻"><span class="f-pendant-loading" role="status">加载挂件…</span></div>' +
+      '<div class="f-pendant-view"><canvas aria-label="断棒挂件：拖拽旋转，双指或滚轮缩放"></canvas><img class="f-pendant-fallback" src="assets/media/field/pendant/front-01.svg" alt="挂件正面CAD雕刻"><span class="f-pendant-loading" role="status">加载挂件…</span></div>' +
       '<div class="f-pendant-versions" role="group" aria-label="选择成员">'+global.FIELD_PENDANT_CATALOG.map(function(v,i){return '<button type="button" data-pendant-version="'+v.id+'" aria-pressed="'+(i===0)+'"><span>'+esc(v.name)+'</span>'+(v.number===null?'':'<small>#'+esc(v.number)+'</small>')+'</button>';}).join('')+'</div><a class="f-pendant-download" data-pendant-download href="assets/media/field/pendant/pendant-20.glb" download>下载模型 ↗</a></section>' +
       '<section class="f-pendant-story"><p>2025年夏天，我和两位队友，把一根被打断的木棒做成半圆形挂件，送给棒球队的每一位成员。</p></section>';
   }

@@ -23,6 +23,10 @@
     renderer.setClearColor(getComputedStyle(document.documentElement).getPropertyValue('--color-paper-1').trim(),0);
     scene.getObjectByName('ambient').intensity=night?1.1:.95;request();
   }
+  function zoomTo(distance){
+    target.distance=Math.max(.38,Math.min(2.5,distance));
+    target.centerY=.13+.38*Math.max(0,Math.min(1,(target.distance-.64)/1.01));request();
+  }
   function tick(now){
     frame=0;if(!open||!renderer)return;var dt=last?Math.min(80,now-last):16;last=now;
     var rate=media.matches?1:1-Math.exp(-dt/90);
@@ -60,16 +64,29 @@
       material=new T.MeshStandardMaterial({color:0xffffff,roughness:.85,metalness:0,side:T.DoubleSide});mesh=new T.Mesh(geometry,material);mesh.rotation.x=Math.PI/2;scene.add(mesh);
       host.dataset.renderer='3d';resize();paint();choose(variant);
       observer=new ResizeObserver(resize);observer.observe(host.querySelector('.f-pendant-view'));
-      var canvas=host.querySelector('canvas'),drag=null;
-      canvas.addEventListener('pointerdown',function(e){if(e.button!==0||!e.isPrimary||drag)return;e.preventDefault();drag={id:e.pointerId,x:e.clientX,y:e.clientY,yaw:target.yaw,pitch:target.pitch};canvas.setPointerCapture(e.pointerId);canvas.classList.add('is-dragging');});
-      canvas.addEventListener('pointermove',function(e){if(!drag||e.pointerId!==drag.id)return;target.yaw=drag.yaw-(e.clientX-drag.x)*.008;target.pitch=Math.max(-1.45,Math.min(1.45,drag.pitch+(e.clientY-drag.y)*.006));request();});
-      function release(e){if(!drag||e.pointerId!==drag.id)return;drag=null;canvas.classList.remove('is-dragging');if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);}
+      var canvas=host.querySelector('canvas'),points=new Map(),gesture=null;
+      function beginGesture(){
+        var p=Array.from(points.values());
+        gesture=p.length>1?{gap:Math.max(1,Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y)),distance:target.distance}:
+          p.length?{x:p[0].x,y:p[0].y,yaw:target.yaw,pitch:target.pitch}:null;
+        canvas.classList.toggle('is-dragging',!!gesture);
+      }
+      canvas.addEventListener('pointerdown',function(e){
+        if(!open||host!==container||host.dataset.renderer!=='3d'||e.button!==0)return;
+        e.preventDefault();points.set(e.pointerId,{x:e.clientX,y:e.clientY});canvas.setPointerCapture(e.pointerId);beginGesture();
+      });
+      canvas.addEventListener('pointermove',function(e){
+        if(!points.has(e.pointerId)||!gesture)return;
+        points.set(e.pointerId,{x:e.clientX,y:e.clientY});var p=Array.from(points.values());
+        if(p.length>1){var gap=Math.max(1,Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y));zoomTo(gesture.distance*gesture.gap/gap);}
+        else {target.yaw=gesture.yaw-(p[0].x-gesture.x)*.008;target.pitch=Math.max(-1.45,Math.min(1.45,gesture.pitch+(p[0].y-gesture.y)*.006));request();}
+      });
+      function release(e){if(!points.delete(e.pointerId))return;beginGesture();if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);}
       canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('lostpointercapture',release);
       canvas.addEventListener('wheel',function(e){
         if(!open||host!==container||host.dataset.renderer!=='3d')return;
         e.preventDefault();var delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?canvas.clientHeight:1);
-        target.distance=Math.max(.38,Math.min(2.5,target.distance*Math.exp(Math.max(-240,Math.min(240,delta))*.0015)));
-        target.centerY=.13+.38*Math.max(0,Math.min(1,(target.distance-.64)/1.01));request();
+        zoomTo(target.distance*Math.exp(Math.max(-240,Math.min(240,delta))*.0015));
       },{passive:false});
       canvas.addEventListener('webglcontextlost',function(e){e.preventDefault();if(open&&host===container){stop();host.dataset.renderer='flat';}});
       canvas.addEventListener('webglcontextrestored',function(){if(open&&host===container){host.dataset.renderer='3d';resize();request();}});
@@ -79,5 +96,5 @@
   document.addEventListener('visibilitychange',function(){if(document.hidden)stop();else request();});
   new MutationObserver(function(){if(open&&renderer)paint();}).observe(document.documentElement,{attributes:true,attributeFilter:['class']});
   media.addEventListener('change',request);
-  global.FieldPendant={open:mount,close:close,inspect:function(){return {open:open,webgl:!!renderer,variant:variant,triangles:renderer?renderer.info.render.triangles:0,textures:renderer?renderer.info.memory.textures:0,running:!!frame,view:Object.assign({},motion),target:Object.assign({},target)};}};
+  global.FieldPendant={open:mount,close:close,inspect:function(){return {open:open,webgl:!!renderer,variant:variant,triangles:renderer?renderer.info.render.triangles:0,textures:renderer?renderer.info.memory.textures:0,glError:renderer?renderer.getContext().getError():null,aspect:camera?camera.aspect:null,running:!!frame,view:Object.assign({},motion),target:Object.assign({},target)};}};
 })(window);

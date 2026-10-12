@@ -126,7 +126,7 @@ window.SITE_DATA = {
       "relief": 0.30,
       "contourInterval": 0.02,
       "combinedContourInterval": 0.025,
-      "combinedGridSize": 384,
+      "combinedGridSize": 512,
       "gridSize": 160,
       "ridgeCount": 24,
       "cycleFrames": 16,
@@ -137,7 +137,7 @@ window.SITE_DATA = {
       "warp": 0.42,
       "mood": 0.5,
       "weather": 0.5,
-      "extent": { "x0": -1.35, "y0": -1.35, "x1": 2.35, "y1": 2.35 }
+      "extent": { "x0": -2.2, "y0": -2.2, "x1": 3.2, "y1": 3.2 }
     }
   },
 

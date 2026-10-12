@@ -1,0 +1,70 @@
+/* Touch layouts share the same paper, green palette and text navigation. */
+@media (max-width: 980px) {
+  #space-city:not([data-project-mode="checkup"]):not([data-project-mode="store"]) .s-projects {
+    display: flex; flex-direction: column; gap: 12px; padding: 12px 20px;
+    overflow-y: auto; overscroll-behavior: contain;
+  }
+  .s-projects__head, .s-projects__detail { position: static; flex-shrink: 0; }
+  .s-projects__orbit { position: relative; inset: auto; flex-shrink: 0; height: 86px; margin-inline: -20px; padding-inline: 20px; }
+  .s-projects__detail { margin-top: auto; padding-top: 12px; }
+}
+@media (pointer: coarse) {
+  button, a { -webkit-tap-highlight-color: transparent; }
+  .p-bar button, .f-bar button, .r-room__bar button, .s-city__back,
+  .c-checkup__head > button, .c-checkup__footer button, .c-checkup__nav button,
+  .s-store__back, .s-store__year, .s-city__icon-button, .p-years button, .f-memory-years button { min-width: 44px; min-height: 44px; }
+  .s-city__zoom { grid-template-columns: 44px 44px; }
+  .s-city__icon-button { width: 44px; height: 44px; }
+  .p-lightbox img, .f-lightbox img { touch-action: none; user-select: none; -webkit-user-select: none; }
+  .p-lightbox figure, .f-lightbox figure { overflow: hidden; }
+}
+@media (max-width: 850px) {
+  #field-room, #moments-room { grid-template-rows: calc(60px + env(safe-area-inset-top)) minmax(0, 1fr); }
+  #rhythm-room { grid-template-rows: calc(60px + env(safe-area-inset-top)) auto; }
+  #space-city { grid-template-rows: calc(56px + env(safe-area-inset-top)) minmax(0, 1fr); }
+  .f-bar, .p-bar, .r-room__bar, .s-city__bar {
+    padding-top: env(safe-area-inset-top);
+    padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right));
+  }
+  .p-body, .f-reading, .r-room__body { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+  .f-map__footer > span:last-child { display: inline; }
+  #field-room[data-view="chapter"] .f-diamond nav { display: none; }
+  .f-lightbox { grid-template-columns: 44px minmax(0, 1fr) 44px; }
+  .p-lightbox { grid-template-columns: 44px minmax(0, 1fr) 44px; }
+  .p-photo-prev, .p-photo-next, .f-photo-prev, .f-photo-next { min-width: 44px; min-height: 44px; }
+  .f-lightbox, .p-lightbox { padding-top: env(safe-area-inset-top); padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+  .f-pendant-view { height: clamp(260px, 48dvh, 380px); }
+}
+@media (max-width: 767px) {
+  #hero-caption { left: max(20px, env(safe-area-inset-left)); top: max(20px, env(safe-area-inset-top)); }
+  #overlay[data-state="open"], #overlay-content { pointer-events: none; }
+  #overlay[data-state="open"] #overlay-content .c-head,
+  #overlay[data-state="open"] #overlay-content .c-space-entry__copy,
+  #overlay[data-state="open"] #overlay-content .c-panel,
+  #overlay[data-state="open"] #overlay-content .c-segmented { pointer-events: auto; }
+  .c-root[data-shell="external"] { --c-block-pad: 14px; }
+  .c-root[data-shell="external"] .c-head { margin-bottom: 16px; }
+  .c-root[data-shell="external"] .c-view .c-head__title { font-size: 42px; }
+  .c-root[data-shell="external"] .c-view .c-head__eyebrow { font-size: 26px; }
+  .c-root[data-shell="external"] .c-view .c-head__subtitle { font-size: 12px; }
+  .c-space-entry__title { font-size: 26px; }
+  .c-space-entry__desc { font-size: 14px; line-height: 1.65; }
+}
+@media (orientation: landscape) and (max-height: 540px) and (min-width: 600px) {
+  #space-city .s-city__body,
+  #space-city[data-project-mode="checkup"] .s-city__body,
+  #space-city[data-project-mode="store"] .s-city__body {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 38%); grid-template-rows: minmax(0, 1fr);
+  }
+  .s-projects { border-top: 0; border-left: 1px solid var(--color-border); }
+  .s-projects__head h2 { font-size: var(--text-base); }
+  .s-city__stamp b { font-size: var(--text-lg); }
+  .f-map__caption { top: 10px; left: max(20px, env(safe-area-inset-left)); }
+  .f-map__caption h3 { margin-top: 0; font-size: 24px; }
+  .f-map__caption p { margin-top: 6px; font-size: 12px; max-width: 205px; }
+  .f-map__footer { bottom: max(12px, env(safe-area-inset-bottom)); }
+  .f-pendant-view { height: 260px; }
+  .f-story-caption { padding: 12px 20px 28px; }
+  .f-story-caption .f-heading h3 { margin: 6px 0; font-size: 24px; }
+  .f-story-caption .f-heading p { font-size: 13px; }
+}

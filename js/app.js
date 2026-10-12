@@ -881,8 +881,9 @@
       var overlay = $("overlay");
       var w = (overlay && overlay.offsetWidth) ? overlay.offsetWidth : 0;
       var wide = window.innerWidth >= 768;
-      /* 桌面和平板都让出右半屏；手机居中。 */
-      return wide ? { x: -w / 2, y: 0 } : { x: 0, y: 0 };
+      /* Narrow screens place the text above the mountain. Keep its summit
+         in the open lower part instead of underneath the entry card. */
+      return wide ? { x: -w / 2, y: 0 } : { x: 0, y: window.innerHeight * .22 };
     });
 
     Engine.setView(Camera.getView());

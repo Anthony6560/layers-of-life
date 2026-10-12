@@ -92,8 +92,8 @@
         global.addEventListener('resize',function(){if(opened){resize();request();}});
         document.addEventListener('visibilitychange',function(){if(document.hidden)stop();else request();});
         media.addEventListener('change',request);
-        buttons.forEach(function(b){b.addEventListener('pointerenter',function(){host.dataset.hover='true';});b.addEventListener('pointerleave',function(){host.dataset.hover='false';request();});});
-        nav.addEventListener('focusin',function(){host.dataset.hover='true';});nav.addEventListener('focusout',function(){host.dataset.hover='false';request();});
+        buttons.forEach(function(b){b.addEventListener('pointerenter',function(e){if(e.pointerType==='mouse')host.dataset.hover='true';});b.addEventListener('pointerleave',function(e){if(e.pointerType==='mouse'){host.dataset.hover='false';request();}});});
+        nav.addEventListener('focusin',function(e){if(e.target.matches(':focus-visible'))host.dataset.hover='true';});nav.addEventListener('focusout',function(){host.dataset.hover='false';request();});
       }
       if(lost){host.dataset.renderer='flat';return false;}
       host.dataset.renderer='3d';palette();return true;

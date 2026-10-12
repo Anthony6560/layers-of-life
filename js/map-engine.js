@@ -440,7 +440,7 @@
      --------------------------------------------------------------------------
        yaw   ：绕 z 轴旋转的方位角（无限制）
        pitch ：俯仰角，90° = 正俯视（纯平面地图），0° = 完全平视
-       S     ：缩放；世界坐标里 S 被拆成 (mapW, mapH) 两个轴（见下）
+       S     ：缩放；世界坐标的两个方向使用相同尺度（见下）
 
      ① x1 = x·cos(yaw) − y·sin(yaw)
         y1 = x·sin(yaw) + y·cos(yaw)
@@ -1857,8 +1857,10 @@
     cv.style.width  = vw + "px";
     cv.style.height = vh + "px";
 
-    mapW = vw * t.mapOverscan;
-    mapH = vh * t.mapOverscan;
+    /* Viewport shape must never deform the terrain. The camera fits this
+       square world to the available screen; GPU, contours and DOM landmarks
+       all consume the same dimensions. */
+    mapW = mapH = Math.max(vw, vh) * t.mapOverscan;
 
     updateProjection();        /* VE / 机位常量与当前数据保持一致 */
 
@@ -3044,6 +3046,10 @@
       contourPixelRatio: dpr,
       activeContourFrames: rasterCache.contourFrames.length,
       contourGridSize: rasterCache.contourFrames.length ? rasterCache.contourFrames[0].hf.n : 0,
+      contourDomain: rasterCache.contourFrames.length ? {
+        x0: rasterCache.contourFrames[0].hf.x0, y0: rasterCache.contourFrames[0].hf.y0,
+        x1: rasterCache.contourFrames[0].hf.x1, y1: rasterCache.contourFrames[0].hf.y1
+      } : null,
       rasterView: rasterCache.view ? Object.assign({}, rasterCache.view) : null,
       pendingRasterView: rasterCache.pendingView ? Object.assign({}, rasterCache.pendingView) : null,
       shadowReady: shadowRasterCache.ready,

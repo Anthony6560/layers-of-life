@@ -27,6 +27,7 @@
       '<div class="p-body"><header class="p-heading"><span data-p-english></span><h3 data-p-title></h3><p data-p-lead></p></header><div class="p-tools"><nav class="p-years" aria-label="按年份浏览" data-p-years></nav></div><div class="p-collection" data-p-collection></div></div>'+
       '<section class="p-lightbox" role="dialog" aria-modal="true" aria-label="照片浏览" hidden><header><span data-p-photo-count></span><button type="button" data-p-action="photo-close">关闭 ×</button></header><button type="button" data-p-action="photo-prev" aria-label="上一张照片">←</button><figure><img alt=""><figcaption></figcaption></figure><button type="button" data-p-action="photo-next" aria-label="下一张照片">→</button></section></section>');
     state.shell=document.getElementById('moments-room');
+    if(global.PhotoGestures)global.PhotoGestures.attach(find('.p-lightbox img'),{previous:function(){showPhoto(state.photo-1);},next:function(){showPhoto(state.photo+1);}});
     state.shell.addEventListener('click',function(e){
       var year=e.target.closest('[data-p-year]');if(year){state.year=year.dataset.pYear;render();find('[data-p-year="'+state.year+'"]').focus();return;}
       var inline=e.target.closest('[data-p-inline-photo]');if(inline){
