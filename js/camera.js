@@ -89,7 +89,7 @@
     if (orbit) return;
     var p = Engine.unprojectNorm(0, 0, view.x, view.y, 1, 0, 0);
     orbit = { x: p.x, y: p.y, z: 0, offsetX: 0, offsetY: 0 };
-    orbitHome = { x: p.x, y: p.y, z: 0, scale: view.scale, pitch: PITCH_HOME };
+    orbitHome = { x: p.x, y: p.y, z: 0, scale: view.scale, yaw: YAW_HOME, pitch: PITCH_HOME };
   }
   function startOrbit(target, cb) {
     initOrbit(); cancelAnim();
@@ -101,25 +101,41 @@
     initOrbit();
     var motion = window.CameraMotion, dt = orbitLastTime ? Math.min(100, Math.max(0, t - orbitLastTime)) : 1000 / 60;
     orbitLastTime = t;
-    yaw += motion.spin(dt) * 180 / Math.PI;
     if (orbitAnim) {
       var target = orbitAnim.target, rate = motion.rate(dt);
+      if (typeof target.yaw === "number" && isFinite(target.yaw)) {
+        yaw += (nearestAngle(yaw, target.yaw) - yaw) * rate;
+      } else {
+        yaw += motion.spin(dt) * 180 / Math.PI;
+      }
       if (target.followTerrain) target.z = Engine.veOf(Engine.terrainHeightAt(target.x, target.y));
       ['x', 'y', 'z', 'offsetX', 'offsetY'].forEach(function (key) { orbit[key] += (target[key] - orbit[key]) * rate; });
       view.scale = motion.damp(view.scale, target.scale, dt);
       pitch = motion.damp(pitch, target.pitch, dt);
     } else if (orbit.followTerrain) orbit.z = Engine.veOf(Engine.terrainHeightAt(orbit.x, orbit.y));
+    if (orbitAnim && t - orbitAnim.startedAt >= motion.settleMs) {
+      var completed = orbitAnim, completedTarget = completed.target;
+      orbit.x = completedTarget.x;
+      orbit.y = completedTarget.y;
+      orbit.z = completedTarget.z;
+      orbit.offsetX = completedTarget.offsetX || 0;
+      orbit.offsetY = completedTarget.offsetY || 0;
+      view.scale = completedTarget.scale;
+      pitch = completedTarget.pitch;
+      if (typeof completedTarget.yaw === "number" && isFinite(completedTarget.yaw)) {
+        yaw = nearestAngle(yaw, completedTarget.yaw);
+      }
+      orbitAnim = null;
+      pushAngles();
+      var cb = completed.cb;
+      completed.cb = null;
+      if (typeof cb === 'function') cb();
+    }
     pushAngles();
     var projected = Engine.projectWorld(orbit.x, orbit.y, orbit.z);
     view.x = projected.x - orbit.offsetX / view.scale;
     view.y = projected.y - orbit.offsetY / view.scale;
     emit();
-    if (orbitAnim && t - orbitAnim.startedAt >= motion.settleMs) {
-      var cb = orbitAnim.cb; orbitAnim.cb = null;
-      // Keep easing the final few pixels after the panel appears; no end snap.
-      if (typeof cb === 'function') cb();
-      if (Math.abs(view.scale - orbitAnim.target.scale) < .00001 && Math.abs(pitch - orbitAnim.target.pitch) < .0001 && Math.hypot(orbit.x - orbitAnim.target.x, orbit.y - orbitAnim.target.y) < .00001 && Math.abs(orbit.offsetX - orbitAnim.target.offsetX) < .01) orbitAnim = null;
-    }
     return !!orbitAnim;
   }
 
@@ -593,14 +609,14 @@
   }
 
   /** 回到全景（docs/10 §6）——
-      必须**同时**复位三件事：yaw → −18°、pitch → 60°、缩放 → extent 拟合值。
+      必须**同时**复位三件事：yaw → 初始方位角、pitch → 52°、缩放 → extent 拟合值。
       拟合机位要在**目标视角下**算（§3.5：旋转会显著改变包围盒），
       因此先临时切到目标角度取机位，再把它作为动画终点。
       无地形时退回地图平面中心 scale 1。 */
   function reset(cb) {
     if (orbit && orbitAvailable()) {
       overviewLocked = true;
-      startOrbit({ x: orbitHome.x, y: orbitHome.y, z: 0, offsetX: 0, offsetY: 0, scale: orbitHome.scale, pitch: orbitHome.pitch }, cb);
+      startOrbit({ x: orbitHome.x, y: orbitHome.y, z: 0, offsetX: 0, offsetY: 0, scale: orbitHome.scale, yaw: YAW_HOME, pitch: orbitHome.pitch }, cb);
       return;
     }
     var y0 = yaw, p0 = pitch;
