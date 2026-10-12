@@ -29,11 +29,11 @@
   function mount() {
     if(state.shell)return;
     document.body.insertAdjacentHTML('beforeend','<section id="field-room" data-state="closed" role="dialog" aria-modal="true" aria-labelledby="field-room-title" aria-hidden="true">' +
-      '<header class="f-bar"><button type="button" data-f-action="close">← 返回场</button><h2 id="field-room-title">场 <span>/ FIELD</span></h2></header>' +
+      '<header class="f-bar"><button type="button" data-f-action="close">返回</button><h2 id="field-room-title">场 <span>/ FIELD</span></h2></header>' +
       '<div class="f-body"><section class="f-map" aria-label="球场导航"><canvas class="f-stadium-canvas" aria-hidden="true"></canvas><svg class="f-stadium-leaders" aria-hidden="true"></svg><div class="f-map__caption"><h3>回到球场</h3><p>为什么棒球是最好的运动？<br>因为其他的运动都没有棒球棒！</p></div>' +
       '<div class="f-diamond">'+fieldSVG()+'<nav aria-label="选择球场内容">' + sections.map(function(s,i){return '<button type="button" data-f-section="'+s.id+'" style="--x:'+s.x+'%;--y:'+s.y+'%" aria-controls="f-content" aria-current="false"><span class="m-landmark__row"><span class="m-landmark__badge">'+String(i+1).padStart(2,'0')+'</span><span class="m-landmark__cn">'+s.name+'</span></span></button>';}).join('') +
       '</nav></div><footer class="f-map__footer"><span>Since 2015</span></footer></section>' +
-      '<section class="f-reading" aria-label="球场内容" tabindex="-1" hidden><div class="f-chapter-bar"><button type="button" data-f-action="overview">↙ 回到球场</button><span data-f-chapter-label></span><button type="button" data-f-action="next">下一站 →</button></div><div id="f-content"></div></section></div>' +
+      '<section class="f-reading" aria-label="球场内容" tabindex="-1" hidden><div class="f-chapter-bar"><button type="button" data-f-action="overview">回到球场</button><span data-f-chapter-label></span><button type="button" data-f-action="next">下一站 →</button></div><div id="f-content"></div></section></div>' +
       '<div class="f-lightbox" role="dialog" aria-modal="true" aria-label="照片浏览" hidden><div class="f-lightbox__bar"><span data-f-photo-count></span><button type="button" data-f-action="photo-close" aria-label="关闭照片">关闭 ×</button></div>' +
       '<button class="f-photo-prev" type="button" data-f-action="photo-prev" aria-label="上一张照片">←</button><figure><img alt=""><figcaption></figcaption></figure><button class="f-photo-next" type="button" data-f-action="photo-next" aria-label="下一张照片">→</button></div></section>');
     state.shell=document.getElementById('field-room');
@@ -114,7 +114,7 @@
       seam+='C'+[b[0]+(c[0]-a[0])/6,b[1]+(c[1]-a[1])/6,c[0]-(d[0]-b[0])/6,c[1]-(d[1]-b[1])/6,c[0],c[1]].map(function(v){return v.toFixed(2);}).join(',');
     }
     var cards=rows.map(function(r,i){var p=points[i];nodes+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="6"/>';return '<li class="f-journey-stop" style="left:'+(p[0]-140)+'px;top:'+(p[1]+32)+'px"><time>'+esc(r.date)+'</time><h4>'+esc(r.title)+'</h4><p>'+esc(r.text)+'</p></li>';}).join('');
-    return '<div class="f-story-space" tabindex="0" role="region" aria-label="按住左键或用单指拖拽浏览故事，可向任意方向移动；方向键也可移动"><div class="f-story-world"><svg class="f-story-seam" viewBox="0 0 2200 1560" aria-hidden="true"><path class="f-story-thread" d="'+seam+'"/><path class="f-story-stitches"/><g class="f-story-nodes">'+nodes+'</g></svg><ol>'+cards+'</ol></div><div class="f-story-caption">'+chapterHeading('journey')+'</div><div class="f-story-range"><span>2015 — 至今</span><span>拖拽，继续故事 ↔</span></div></div>';
+    return '<div class="f-story-space" tabindex="0" role="region" aria-label="按住左键或用单指拖拽浏览故事，可向任意方向移动；方向键也可移动"><div class="f-story-world"><svg class="f-story-seam" viewBox="0 0 2200 1560" aria-hidden="true"><path class="f-story-thread" d="'+seam+'"/><path class="f-story-stitches"/><g class="f-story-nodes">'+nodes+'</g></svg><ol>'+cards+'</ol></div><div class="f-story-caption">'+chapterHeading('journey')+'</div><div class="f-story-range"><span>2015 — 至今</span></div></div>';
   }
   function closeStory() { if(state.story)state.story.close();state.story=null; }
   function mountStory() {

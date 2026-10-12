@@ -423,7 +423,6 @@ body.m-mode-reduced #landmark-layer { transform: none !important; }
 .m-preloader__inner{display:flex!important;align-items:flex-start!important;justify-content:center!important}
 .m-intro__copy{margin:0!important}
 .m-preloader__track,.m-preloader__label{display:none!important}
-.p-bar button,.f-bar button,.r-room__bar button,.s-city__back{font-size:0!important}
-.p-bar button::after,.f-bar button::after,.r-room__bar button::after,.s-city__back::after{content:'返回';font-size:var(--text-sm)!important;line-height:1}
+.p-bar button,.f-bar button,.r-room__bar button,.s-city__back{font-size:var(--text-sm)!important;line-height:1}
 .m-intro__name{display:initial!important}
 #terrain-preloader .m-intro__name{display:none!important}

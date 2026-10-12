@@ -12,7 +12,7 @@
   }
   function shellHTML() {
     return '<section id="rhythm-room" data-state="closed" data-playing="false" role="dialog" aria-modal="true" aria-labelledby="rhythm-room-title" aria-hidden="true">' +
-      '<header class="r-room__bar"><button type="button" data-r-action="close">← 返回节奏</button><h2 id="rhythm-room-title">节奏 <span>/ RHYTHM</span></h2><span class="r-room__count" data-r-count></span></header>' +
+      '<header class="r-room__bar"><button type="button" data-r-action="close">返回</button><h2 id="rhythm-room-title">节奏 <span>/ RHYTHM</span></h2><span class="r-room__count" data-r-count></span></header>' +
       '<div class="r-room__body"><section class="r-stage" aria-label="当前作品播放器">' +
         '<div class="r-stage__top"><span data-r-label>01 / 音乐影像</span></div>' +
         '<div class="r-stage__picture"><div class="r-stage__grooves" aria-hidden="true"></div>' +

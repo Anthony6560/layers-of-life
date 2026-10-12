@@ -23,7 +23,7 @@
   function mount() {
     if(state.shell)return;
     document.body.insertAdjacentHTML('beforeend','<section id="moments-room" data-state="closed" role="dialog" aria-modal="true" aria-labelledby="moments-room-title" aria-hidden="true">'+
-      '<header class="p-bar"><button type="button" data-p-action="close">← 返回<span data-p-return></span></button><h2 id="moments-room-title"></h2></header>'+
+      '<header class="p-bar"><button type="button" data-p-action="close">返回</button><h2 id="moments-room-title"></h2></header>'+
       '<div class="p-body"><header class="p-heading"><span data-p-english></span><h3 data-p-title></h3><p data-p-lead></p></header><div class="p-tools"><nav class="p-years" aria-label="按年份浏览" data-p-years></nav></div><div class="p-collection" data-p-collection></div></div>'+
       '<section class="p-lightbox" role="dialog" aria-modal="true" aria-label="照片浏览" hidden><header><span data-p-photo-count></span><button type="button" data-p-action="photo-close">关闭 ×</button></header><button type="button" data-p-action="photo-prev" aria-label="上一张照片">←</button><figure><img alt=""><figcaption></figcaption></figure><button type="button" data-p-action="photo-next" aria-label="下一张照片">→</button></section></section>');
     state.shell=document.getElementById('moments-room');
@@ -71,7 +71,7 @@
     [global.FieldRoom,global.RhythmPlayer,global.SpaceCity].forEach(function(room){if(room&&room.isOpen())room.close();});
     mount();state.focus=document.activeElement;state.category=category;state.year='all';state.open=true;
     state.shell.dataset.category=category;state.shell.dataset.state='open';state.shell.setAttribute('aria-hidden','false');
-    find('[data-p-return]').textContent=titles[category];find('#moments-room-title').textContent=titles[category];find('[data-p-title]').textContent=titles[category];
+    find('#moments-room-title').textContent=titles[category];find('[data-p-title]').textContent=titles[category];
     find('[data-p-english]').textContent=category==='light'?'LIGHT':'TASTE';
     find('[data-p-lead]').textContent=category==='light'?'照片，以及拍下它们时的几句话。':'做过的，吃过的，记得的。';
     render();find('.p-body').scrollTop=0;

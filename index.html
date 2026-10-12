@@ -7,10 +7,10 @@
 
   <!-- 样式：tokens 必须最先，其余顺序不限（契约 §3.4） -->
   <link rel="stylesheet" href="css/tokens.css?v=20261007-green-panels">
-  <link rel="stylesheet" href="css/base.css?v=20261009-intro-axis-spacing">
+  <link rel="stylesheet" href="css/base.css?v=20261012-text-back">
   <link rel="stylesheet" href="css/map.css?v=20261007-peak-original-labels">
-  <link rel="stylesheet" href="css/content.css?v=20261007-fit-panels">   <!-- Agent D -->
-  <link rel="stylesheet" href="css/space-city.css?v=20261008-render-recovery">
+  <link rel="stylesheet" href="css/content.css?v=20261012-text-back">   <!-- Agent D -->
+  <link rel="stylesheet" href="css/space-city.css?v=20261012-text-back">
   <link rel="stylesheet" href="css/city-checkup.css?v=20261007-checkup-4">
   <link rel="stylesheet" href="css/time-cube.css?v=20261007-trends-hotspot-picking">
   <link rel="stylesheet" href="css/rhythm.css?v=20261008-credits-type">
@@ -175,22 +175,22 @@
 <script src="js/placeholder.js?v=20261003-smooth-cache"></script>
 
 <!-- 3. 内容模块：Agent D 提供，必须先于 app.js -->
-<script src="js/content-module.js?v=20261011-natural-masonry"></script>
-<script src="js/moments-room.js?v=20261011-natural-masonry"></script>
+<script src="js/content-module.js?v=20261012-text-back"></script>
+<script src="js/moments-room.js?v=20261012-text-back"></script>
 <script src="js/field-pendant.js?v=20261010-pendant-members"></script>
 <script src="assets/data/field.pendant.catalog.data.js?v=20261010-pendant-members"></script>
-<script src="js/field-room.js?v=20261012-field-copy"></script>
+<script src="js/field-room.js?v=20261012-text-back"></script>
 <script src="js/rhythm-visualizer.js?v=20261008-play-visuals"></script>
-<script src="js/rhythm-player.js?v=20261008-play-lifecycle"></script>
+<script src="js/rhythm-player.js?v=20261012-text-back"></script>
 
 <!-- 空间内页：Three.js 本地打包，保持 file:// 离线打开可用 -->
 <script src="js/vendor/three.r128.min.js?v=128"></script>
 <script src="js/camera-motion.js?v=20261007-unified-orbit"></script>
 <script src="js/field-stadium.js?v=20261011-field-chapters"></script>
-<script src="js/city-checkup.js?v=20261007-unified-orbit"></script>
-<script src="js/convenience-research.js?v=20261007-trends-hotspot-picking"></script>
+<script src="js/city-checkup.js?v=20261012-text-back"></script>
+<script src="js/convenience-research.js?v=20261012-text-back"></script>
 <script src="js/convenience-store.js?v=20261007-research-narrative"></script>
-<script src="js/space-city.js?v=20261008-gpu-lifecycle"></script>
+<script src="js/space-city.js?v=20261012-text-back"></script>
 
 <!-- 4. 地图引擎：Agent C 提供 -->
 <!-- environment.js 根据站点经纬度与当前时间计算太阳位置，并提供远景动态驱动 -->
@@ -212,8 +212,7 @@
 <style id="minimal-interface-overrides">
   .p-bar,.f-bar,.r-room__bar,.s-city__bar{display:flex!important;align-items:center!important;justify-content:flex-start!important;grid-template-columns:none!important}
   .p-bar h2,.f-bar h2,.r-room__bar h2,.r-room__count,.s-city__identity,.s-city__readout{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important;border:0!important}
-  .p-bar button,.f-bar button,.r-room__bar button,.s-city__back{font-size:0!important}
-  .p-bar button::after,.f-bar button::after,.r-room__bar button::after,.s-city__back::after{content:'返回';font-size:var(--text-sm)!important;line-height:1}
+  .p-bar button,.f-bar button,.r-room__bar button,.s-city__back{font-size:var(--text-sm)!important;line-height:1}
   .m-intro__coordinates,.m-intro__name{display:none!important}
   .m-intro__footer{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
 </style>

@@ -95,7 +95,7 @@
     return '<section id="space-city" data-state="closed" role="dialog" aria-modal="true" ' +
       'aria-labelledby="space-city-title" aria-hidden="true">' +
       '<header class="s-city__bar">' +
-        '<button class="s-city__back" type="button" data-city-action="close"><span aria-hidden="true">←</span><span>返回空间</span></button>' +
+        '<button class="s-city__back" type="button" data-city-action="close">返回</button>' +
         '<div class="s-city__identity"><strong id="space-city-title">更“近”一步</strong><span>NANSHAN / URBAN SPACE &amp; TIME</span></div>' +
         '<div class="s-city__readout"><i aria-hidden="true"></i><span data-city-readout>AUTO ROTATION / TERRAIN ON</span></div>' +
       '</header>' +

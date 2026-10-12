@@ -155,9 +155,6 @@
   /** 返回按钮（行为交给 Scene.closeOverlay，契约 §2.3 / 任务说明） */
   function backButtonHTML() {
     return '<button type="button" class="c-back" data-action="back">' +
-      '<svg class="c-back__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">' +
-      '<path d="M13 8H3M7 4L3 8l4 4" fill="none" stroke="currentColor" ' +
-      'stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
       '<span class="c-back__label">' + esc(t('back')) + '</span></button>';
   }
 

@@ -106,14 +106,13 @@
       '<button type="button" class="s-store__play" data-store-play aria-pressed="false">播放时间演示</button>' +
       '<div class="s-store__metrics"><div><strong data-store-records></strong><span>观测记录</span></div><div><strong data-store-cells></strong><span>有记录网格</span></div><div><strong>1 km</strong><span>网格边长</span></div></div>' +
       '<div class="s-store__legend"><span>低</span><i></i><span>'+maxCount+'条 / 网格</span></div>' +
-      '<div class="s-store__profile" data-store-profile><h4>同一位置，五期对照</h4><p>点击左侧网格查看变化。</p></div>' +
+      '<div class="s-store__profile" data-store-profile><h4>同一位置，五期对照</h4></div>' +
       '<p class="s-store__note">动画只连接五期观测，不生成中间年份的门店数量。</p>');
     content += section('hotspot','哪些地方正在成为热点？',
       '<p>新兴热点分析结合局部集聚与时间趋势，区分新增、连续、加强、持续、分散及振荡等类型。它关注的不只是某一年的密度，而是一个位置的长期变化。</p>' +
       '<div class="s-research__switch"><button type="button" data-hotspot-view="category" aria-pressed="true">演化类型</button><button type="button" data-hotspot-view="bins" aria-pressed="false">逐年冷热点</button></div>' +
       '<label class="s-research__hot-year" hidden>分析年份 <input data-hotspot-year type="range" min="2012" max="2023" step="1" value="2023"><b data-hotspot-year-label>2023</b></label>' +
       '<div class="s-research__categories" data-hotspot-legend></div>' +
-      '<p class="s-store__note">点击左侧网格，查看该位置的演化类型。</p>' +
       '<p class="s-store__note">此处使用研究中已有的LOCF年度填充方案，未观测年份沿用最近一期数据。冷热点结果受该填充方式影响。</p>');
     content += section('model','从全局关系到局部差异',
       '<p>以便利店核密度为因变量，GDP、道路线密度与城市化密度为自变量。OLS用一组全局系数描述深圳，GTWR允许关系随位置和年份变化。</p>' +
@@ -135,12 +134,12 @@
       '<p>标准化残差展示观测密度与预测密度的偏离。绿色为观测高于预测，灰紫为观测低于预测；颜色越深，偏离越明显。</p>' +
       '<p>文档重点讨论机场—福永、大鹏沿海等区域，并提出旅游、空港与产业服务等可能的解释。这些是后续研究线索，残差本身不能证实其成因。</p>' +
       '<div class="s-research__diagnostics"><span>调整R²</span><b>'+m.diagnostics.adj_R2.toFixed(3)+'</b><span>AICc</span><b>'+num(m.diagnostics.AICc,1)+'</b><span>有效参数数量</span><b>'+num(m.diagnostics.ENP,1)+'</b></div>' +
-      '<div class="s-research__selection" data-research-selection>点击左侧样本点，查看观测、预测与残差。</div>');
+      '<div class="s-research__selection" data-research-selection></div>');
     content += section('conclusion','回到城市的日常',
       '<p>研究从三个角度理解深圳便利店网络：既有覆盖内的加密、多中心的空间结构，以及驱动因素的时空差异。把它们放在一起，才能同时读到增长的规模、位置与关联。</p>' +
       '<h4>还有哪些问题？</h4><p>POI口径与年度填充会影响时间比较；大量零值网格、固定带宽和业态混合也限制了模型解释。未来可细分社区、商务、旅游与产业型网点，并加入人流、轨道可达性和多尺度模型。</p>' +
       '<details><summary>数据与结果口径</summary><p>网页采用清洗后的五期POI记录，保留原提取口径中少量其他类别；使用已有服务区、椭圆与LOCF热点结果。回归系数与诊断采用同一版最新输出，并在同一样本上核算OLS。文档中较早版本的0.613拟合指标未与此版混用。</p></details>');
-    return '<aside class="s-store" data-store-panel hidden><button type="button" class="s-store__back" data-store-back>← 返回项目入口</button>' +
+    return '<aside class="s-store" data-store-panel hidden><button type="button" class="s-store__back" data-store-back>返回项目入口</button>' +
       '<p class="s-store__eyebrow">课程项目 · 2012—2023</p><h2 class="s-store__title">深圳市便利店格局演化与驱动机制</h2>' +
       '<p class="s-store__intro">基于多源时空数据</p><div class="s-research__controls"><label>章节<select data-research-nav aria-label="选择研究章节">'+navigation+'</select></label>' +
       '<div class="s-store__years" role="group" aria-label="观测年份">'+yearButtons+'</div><div class="s-store__readout"><span>观测年份</span><strong data-store-current></strong></div></div>' + content + '</aside>';
