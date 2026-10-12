@@ -97,7 +97,35 @@
     orbitAnim = { target: target, startedAt: now(), cb: cb || null };
     ensureTicking();
   }
-  function updateOrbit(t) {
+function syncOverviewOrbit() {
+  if (!overviewLocked || !orbit) return;
+
+  var fit = overviewView();
+  if (!fit) return;
+
+  /* Keep the orbit anchor under the fitted projected center. Without this,
+     the next frame would overwrite the fitted view with the old anchor. */
+  var center = typeof Engine.unprojectNorm === 'function'
+    ? Engine.unprojectNorm(0, 0, fit.x, fit.y, 1, 0, 0)
+    : null;
+  if (center && isFinite(center.x) && isFinite(center.y)) {
+    orbit.x = center.x;
+    orbit.y = center.y;
+    orbit.z = 0;
+  }
+  view.x = fit.x;
+  view.scale = fit.scale;
+  /* The projected bounds are mathematically centered, but the mountain mass
+     sits visually high because of the elevated pitch. Give the overview a
+     small, viewport-relative downward bias while keeping the fit dynamic. */
+  var viewportHeight = typeof window !== 'undefined' && window.innerHeight
+    ? window.innerHeight
+    : 800;
+  var biasPx = Math.max(28, Math.min(56, viewportHeight * 0.05));
+  view.y = fit.y - biasPx / Math.max(view.scale, 0.0001);
+}
+
+function updateOrbit(t) {
     initOrbit();
     var motion = window.CameraMotion, dt = orbitLastTime ? Math.min(100, Math.max(0, t - orbitLastTime)) : 1000 / 60;
     orbitLastTime = t;
@@ -139,9 +167,13 @@
       if (typeof cb === 'function') cb();
     }
     pushAngles();
+  if (overviewLocked) {
+    syncOverviewOrbit();
+  } else {
     var projected = Engine.projectWorld(orbit.x, orbit.y, orbit.z);
     view.x = projected.x - orbit.offsetX / view.scale;
     view.y = projected.y - orbit.offsetY / view.scale;
+  }
     emit();
     return !!orbitAnim;
   }
@@ -224,10 +256,7 @@
     yaw = ny; pitch = np;
     pushAngles();
     if (view.inited && overviewLocked) {
-      var fit = overviewView();
-      view.x = fit.x;
-      view.y = fit.y;
-      view.scale = fit.scale;
+    syncOverviewOrbit();
     }
     clampView();
     emit();
