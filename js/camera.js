@@ -89,7 +89,7 @@
     if (orbit) return;
     var p = Engine.unprojectNorm(0, 0, view.x, view.y, 1, 0, 0);
     orbit = { x: p.x, y: p.y, z: 0, offsetX: 0, offsetY: 0 };
-    orbitHome = { x: p.x, y: p.y, z: 0, scale: view.scale, yaw: YAW_HOME, pitch: PITCH_HOME };
+    orbitHome = { x: p.x, y: p.y, z: 0, scale: view.scale, pitch: PITCH_HOME };
   }
   function startOrbit(target, cb) {
     initOrbit(); cancelAnim();
@@ -101,12 +101,19 @@
     initOrbit();
     var motion = window.CameraMotion, dt = orbitLastTime ? Math.min(100, Math.max(0, t - orbitLastTime)) : 1000 / 60;
     orbitLastTime = t;
+    var target = orbitAnim && orbitAnim.target;
+    /* 主页与普通局部页保持统一的慢速自转。只要目标没有明确要求
+       方位插值，就按经过时间推进，并把角度收回 [-180°, 180°) 以免长期累积。 */
+    if (!target || typeof target.yaw !== "number" || !isFinite(target.yaw)) {
+      yaw += motion.spin(dt) * 180 / Math.PI;
+      yaw = yaw - Math.round(yaw / 360) * 360;
+    }
     if (orbitAnim) {
-      var target = orbitAnim.target, rate = motion.rate(dt);
+      var rate = motion.rate(dt);
       if (typeof target.yaw === "number" && isFinite(target.yaw)) {
         yaw += (nearestAngle(yaw, target.yaw) - yaw) * rate;
       } else {
-        yaw += motion.spin(dt) * 180 / Math.PI;
+        /* target 没有 yaw 时，上面的自转就是唯一的方位变化来源。 */
       }
       if (target.followTerrain) target.z = Engine.veOf(Engine.terrainHeightAt(target.x, target.y));
       ['x', 'y', 'z', 'offsetX', 'offsetY'].forEach(function (key) { orbit[key] += (target[key] - orbit[key]) * rate; });
@@ -616,7 +623,7 @@
   function reset(cb) {
     if (orbit && orbitAvailable()) {
       overviewLocked = true;
-      startOrbit({ x: orbitHome.x, y: orbitHome.y, z: 0, offsetX: 0, offsetY: 0, scale: orbitHome.scale, yaw: YAW_HOME, pitch: orbitHome.pitch }, cb);
+      startOrbit({ x: orbitHome.x, y: orbitHome.y, z: 0, offsetX: 0, offsetY: 0, scale: orbitHome.scale, pitch: orbitHome.pitch }, cb);
       return;
     }
     var y0 = yaw, p0 = pitch;
