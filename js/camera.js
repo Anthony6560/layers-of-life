@@ -81,6 +81,7 @@
   var anim = null;            /* 进行中的镜头动画 */
   var selfTick = 0;           /* 降级态下的临时 rAF id */
   var orbit = null, orbitHome = null, orbitAnim = null, orbitLastTime = 0;
+  var overviewStableScale = null;
 
   function orbitAvailable() {
     return !!(window.CameraMotion && window.TerrainOrbit && window.TerrainOrbit.ready() && Engine.getMode() === 'full');
@@ -97,35 +98,58 @@
     orbitAnim = { target: target, startedAt: now(), cb: cb || null };
     ensureTicking();
   }
-function syncOverviewOrbit() {
-  if (!overviewLocked || !orbit) return;
 
-  var fit = overviewView();
-  if (!fit) return;
-
-  /* Keep the orbit anchor under the fitted projected center. Without this,
-     the next frame would overwrite the fitted view with the old anchor. */
-  var center = typeof Engine.unprojectNorm === 'function'
-    ? Engine.unprojectNorm(0, 0, fit.x, fit.y, 1, 0, 0)
-    : null;
-  if (center && isFinite(center.x) && isFinite(center.y)) {
-    orbit.x = center.x;
-    orbit.y = center.y;
-    orbit.z = 0;
+  function overviewBiasPx() {
+    var h = typeof window !== "undefined" && window.innerHeight ? window.innerHeight : 800;
+    return Math.max(28, Math.min(56, h * 0.05));
   }
-  view.x = fit.x;
-  view.scale = fit.scale;
-  /* The projected bounds are mathematically centered, but the mountain mass
-     sits visually high because of the elevated pitch. Give the overview a
-     small, viewport-relative downward bias while keeping the fit dynamic. */
-  var viewportHeight = typeof window !== 'undefined' && window.innerHeight
-    ? window.innerHeight
-    : 800;
-  var biasPx = Math.max(28, Math.min(56, viewportHeight * 0.05));
-  view.y = fit.y - biasPx / Math.max(view.scale, 0.0001);
-}
 
-function updateOrbit(t) {
+  /* Calculate one conservative scale while the intro still covers the map.
+     A fixed scale avoids the visible breathing caused by fitting every yaw. */
+  function measureStableOverviewScale() {
+    var savedYaw = yaw;
+    var stable = Infinity;
+    for (var i = 0; i < 12; i++) {
+      yaw = savedYaw + i * 30;
+      pushAngles();
+      var sample = overviewView();
+      if (sample && isFinite(sample.scale) && sample.scale > 0) {
+        stable = Math.min(stable, sample.scale);
+      }
+    }
+    yaw = savedYaw;
+    pushAngles();
+    overviewStableScale = isFinite(stable) ? stable : overviewView().scale;
+    fitFloor = overviewStableScale < minScale ? overviewStableScale * 0.92 : Infinity;
+    return overviewStableScale;
+  }
+
+  function syncOverviewOrbit() {
+    if (!overviewLocked || !orbit || orbitAnim) return;
+
+    var fit = overviewView();
+    if (!fit) return;
+
+    var scale = overviewStableScale || fit.scale;
+    var biasPx = overviewBiasPx();
+    /* Keep the orbit anchor under the fitted projected center. Without this,
+       the next frame would overwrite the fitted view with the old anchor. */
+    var center = typeof Engine.unprojectNorm === "function"
+      ? Engine.unprojectNorm(0, 0, fit.x, fit.y, 1, 0, 0)
+      : null;
+    if (center && isFinite(center.x) && isFinite(center.y)) {
+      orbit.x = center.x;
+      orbit.y = center.y;
+      orbit.z = 0;
+      orbit.offsetX = 0;
+      orbit.offsetY = biasPx;
+    }
+    view.x = fit.x;
+    view.y = fit.y - biasPx / Math.max(scale, 0.0001);
+    view.scale = scale;
+  }
+
+  function updateOrbit(t) {
     initOrbit();
     var motion = window.CameraMotion, dt = orbitLastTime ? Math.min(100, Math.max(0, t - orbitLastTime)) : 1000 / 60;
     orbitLastTime = t;
@@ -167,13 +191,13 @@ function updateOrbit(t) {
       if (typeof cb === 'function') cb();
     }
     pushAngles();
-  if (overviewLocked) {
-    syncOverviewOrbit();
-  } else {
-    var projected = Engine.projectWorld(orbit.x, orbit.y, orbit.z);
-    view.x = projected.x - orbit.offsetX / view.scale;
-    view.y = projected.y - orbit.offsetY / view.scale;
-  }
+    if (overviewLocked && !orbitAnim) {
+      syncOverviewOrbit();
+    } else {
+      var projected = Engine.projectWorld(orbit.x, orbit.y, orbit.z);
+      view.x = projected.x - orbit.offsetX / view.scale;
+      view.y = projected.y - orbit.offsetY / view.scale;
+    }
     emit();
     return !!orbitAnim;
   }
@@ -294,9 +318,11 @@ function updateOrbit(t) {
       /* 初始视图：**自适应地形包围盒**（docs/08 §4.6）。
          地形范围随内容生长，因此"看清全图所需的缩放级别"本身就是内容量的度量。 */
       var home = overviewView();
+      overviewStableScale = measureStableOverviewScale();
+      home = overviewView();
       view.x = home.x;
-      view.y = home.y;
-      view.scale = home.scale;
+      view.y = home.y - overviewBiasPx() / Math.max(overviewStableScale, 0.0001);
+      view.scale = overviewStableScale;
       view.inited = true;
       overviewLocked = true;
     } else {
@@ -311,12 +337,17 @@ function updateOrbit(t) {
     pushAngles();
     invalidateBounds();
     if (orbit) {
-      orbitHome.scale = overviewView().scale;
+      if (overviewLocked) {
+        overviewStableScale = measureStableOverviewScale();
+      }
+      orbitHome.scale = overviewStableScale || overviewView().scale;
       var offset = typeof focusOffsetFn === 'function' ? focusOffsetFn() : { x: 0, y: 0 };
       if (orbitAnim) {
         if (overviewLocked) orbitAnim.target.scale = orbitHome.scale;
         else { orbitAnim.target.offsetX = offset.x || 0; orbitAnim.target.offsetY = offset.y || 0; }
-      } else if (overviewLocked) view.scale = orbitHome.scale;
+      } else if (overviewLocked) {
+        view.scale = orbitHome.scale;
+      }
       else { orbit.offsetX = offset.x || 0; orbit.offsetY = offset.y || 0; }
       return;
     }
@@ -652,7 +683,20 @@ function updateOrbit(t) {
   function reset(cb) {
     if (orbit && orbitAvailable()) {
       overviewLocked = true;
-      startOrbit({ x: orbitHome.x, y: orbitHome.y, z: 0, offsetX: 0, offsetY: 0, scale: orbitHome.scale, pitch: orbitHome.pitch }, cb);
+      var fit = overviewView();
+      var scale = overviewStableScale || fit.scale;
+      var center = typeof Engine.unprojectNorm === "function"
+        ? Engine.unprojectNorm(0, 0, fit.x, fit.y, 1, 0, 0)
+        : null;
+      startOrbit({
+        x: center && isFinite(center.x) ? center.x : orbitHome.x,
+        y: center && isFinite(center.y) ? center.y : orbitHome.y,
+        z: 0,
+        offsetX: 0,
+        offsetY: overviewBiasPx(),
+        scale: scale,
+        pitch: orbitHome.pitch
+      }, cb);
       return;
     }
     var y0 = yaw, p0 = pitch;
