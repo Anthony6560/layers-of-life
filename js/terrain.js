@@ -20,7 +20,7 @@
    命名空间（契约 §2.1）：只写 window.Scene._.Terrain，不新增全局变量。
    ============================================================================ */
 
-(function () {
+(function installTerrain() {
   "use strict";
 
   if (!window.Scene) { window.Scene = {}; }
@@ -1006,6 +1006,7 @@
      ──────────────────────────────────────────────────────────────────────── */
 
   Scene._.Terrain = {
+    workerSource: '(' + installTerrain.toString() + ')();',
     DEFAULTS:            DEFAULTS,
     INDEX_INTERVAL:      INDEX_INTERVAL,
     indexIntervalFor:    indexIntervalFor,

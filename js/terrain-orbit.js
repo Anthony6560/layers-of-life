@@ -6,6 +6,7 @@
   var frames = [], wantedFrames = [], cache = new Map(), lights, previousLights, pendingLights, lightStarted = 0;
   var failed = false, contextLost = false, gpuSuspended = false, rendererError = '', width = 0, height = 0, pixelRatio = 1, preparedFrames = 0;
   var uniforms, lineMaterials = [[], []], composite, fallbackTexture;
+  var preparing = false;
   var projection = [
     'uniform vec2 mapSize, viewport, viewCenter, screenOffset;',
     'uniform vec4 angles; uniform float zoom, exaggeration;',
@@ -105,20 +106,23 @@
     releaseLights(previousLights); previousLights = lights; lights = pendingLights; pendingLights = null; lightStarted = now;
   }
   function discardPreparedLighting() { releaseLights(pendingLights); pendingLights = null; }
-  function prepareFrames(next) {
+  function prepareFrames(next, onReady) {
     if (next && next.length) wantedFrames = next;
-    if (!init() || !next || !next.length || frames === next) return !!renderer;
+    if (!init() || !next || !next.length || frames === next) { if (onReady) onReady(!!renderer && !preparing); return !!renderer; }
+    preparing = !!onReady;
     cache.forEach(function (entry) { entry.geometry.dispose(); entry.lines.children.forEach(function (line) { line.geometry.dispose(); }); entry.baseLight.dispose(); });
     cache.clear(); lineScene.clear(); mesh.geometry.dispose(); frames = next;
     releaseLights(lights); releaseLights(previousLights); releaseLights(pendingLights); lights = previousLights = pendingLights = null;
-    var hf = next[0].hf, n = hf.n, count = n * n, positions = new Float32Array(count * 3), indices = new Uint32Array((n - 1) * (n - 1) * 6), offset = 0;
-    for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) {
+    var hf = next[0].hf, n = hf.n, count = n * n, source = next[0].meshSource;
+    var positions = source ? source.positions : new Float32Array(count * 3);
+    var indices = source ? source.indices : new Uint32Array((n - 1) * (n - 1) * 6), offset = 0;
+    if (!source) for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) {
       var k = y * n + x; positions[k * 3] = hf.x0 + x * hf.cellX; positions[k * 3 + 1] = hf.y0 + y * hf.cellY;
       if (x < n - 1 && y < n - 1) { indices.set([k, k + 1, k + n + 1, k, k + n + 1, k + n], offset); offset += 6; }
     }
     var geometry = new T.BufferGeometry(); geometry.setAttribute('position', new T.BufferAttribute(positions, 3)); geometry.setIndex(new T.BufferAttribute(indices, 1)); mesh.geometry = geometry;
     uniforms.domain.value.set(hf.x0, hf.y0, hf.cellX * (n - 1), hf.cellY * (n - 1));
-    next.forEach(function (frame) {
+    function buildFrame(frame) {
       if (cache.has(frame)) return;
       var entry = { height: new T.BufferAttribute(frame.hf.data, 1), lines: new T.Group(), baseLight: lightTexture(frame.surfaceCache) };
       entry.geometry = new T.BufferGeometry(); entry.geometry.setAttribute('position', geometry.getAttribute('position')); entry.geometry.setIndex(geometry.index); entry.geometry.setAttribute('heightA', entry.height); entry.geometry.setAttribute('heightB', entry.height);
@@ -130,27 +134,62 @@
         var object = new T.Mesh(geo, lineMaterials[0][band]); object.frustumCulled = false; entry.lines.add(object);
       });
       entry.lines.visible = false; lineScene.add(entry.lines); cache.set(frame, entry);
-    });
-    preparedFrames = cache.size;
-    mesh.geometry = cache.get(next[0]).geometry;
-    warmFrames();
+    }
+    function finish() {
+      preparedFrames = cache.size;
+      mesh.geometry = cache.get(next[0]).geometry;
+      warmFrames(onReady ? function (success) { preparing = false; onReady(success !== false); } : null);
+    }
+    if (onReady) {
+      var index = 0;
+      function step() {
+        try {
+          buildFrame(next[index++]);
+          if (index < next.length) global.setTimeout(step, 0);
+          else finish();
+        } catch (error) { preparing = false; frames = []; rendererError = String(error); onReady(false); }
+      }
+      global.setTimeout(step, 0);
+    } else { next.forEach(buildFrame); finish(); }
     return true;
   }
-  function warmFrames() {
-    if (!renderer || gpuSuspended || !frames.length) return;
+  function warmFrames(onReady) {
+    if (!renderer || gpuSuspended || !frames.length) { if (onReady) onReady(); return; }
     renderer.initTexture(fallbackTexture);
     cache.forEach(function (entry) { renderer.initTexture(entry.baseLight); });
     [lights, previousLights, pendingLights].forEach(function (list) {
       if (list) new Set(list).forEach(function (texture) { renderer.initTexture(texture); });
     });
-    renderer.compile(scene, camera); renderer.compile(lineScene, camera);
+    renderer.compile(scene, camera); renderer.compile(lineScene, camera); renderer.compile(compositeScene, camera);
     // Upload every loop frame before removing the loading screen. A 1px target
     // warms buffers/programs without filling a screen for each cached frame.
     var warm = new T.WebGLRenderTarget(1, 1); renderer.setRenderTarget(warm);
-    cache.forEach(function (entry) { mesh.geometry = entry.geometry; entry.lines.visible = true; renderer.render(scene, camera); renderer.render(lineScene, camera); entry.lines.visible = false; });
-    renderer.setRenderTarget(null); warm.dispose(); mesh.geometry = cache.get(frames[0]).geometry;
+    function warmEntry(entry) {
+      renderer.setRenderTarget(warm);
+      mesh.geometry = entry.geometry; entry.lines.visible = true;
+      renderer.render(scene, camera); renderer.render(lineScene, camera);
+      entry.lines.visible = false; renderer.setRenderTarget(null);
+    }
+    function finish() { warm.dispose(); mesh.geometry = cache.get(frames[0]).geometry; if (onReady) onReady(); }
+    if (onReady) {
+      var entries = Array.from(cache.values()), index = 0;
+      function step() {
+        try { warmEntry(entries[index++]); if (index < entries.length) global.setTimeout(step, 0); else finish(); }
+        catch (error) {
+          rendererError = String(error); renderer.setRenderTarget(null); warm.dispose(); frames = [];
+          onReady(false);
+        }
+      }
+      renderer.setRenderTarget(null); global.setTimeout(step, 0);
+    } else { cache.forEach(warmEntry); finish(); }
   }
   function setColor(uniform, rgb) { if (rgb) uniform.value.set(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255); }
+  function prepareFramesAsync(next) {
+    return new Promise(function (resolve) {
+      try { prepareFrames(next, resolve); }
+      catch (error) { preparing = false; rendererError = String(error); resolve(false); }
+    });
+  }
   function blend(a, b, t) { return a.map(function (v, i) { return v + (b[i] - v) * t; }); }
   function render(options) {
     if (gpuSuspended || !ready() || frames !== options.frames) return false;
@@ -189,7 +228,7 @@
     options.ctx.save(); options.ctx.setTransform(1, 0, 0, 1, 0, 0); options.ctx.drawImage(renderer.domElement, 0, 0, options.canvas.width, options.canvas.height); options.ctx.restore();
     return true;
   }
-  function ready() { return !!renderer && !contextLost && !renderer.getContext().isContextLost() && !!frames.length; }
+  function ready() { return !!renderer && !preparing && !contextLost && !renderer.getContext().isContextLost() && !!frames.length; }
   function suspendGPU() {
     gpuSuspended = true;
     if (!renderer) return;
@@ -217,5 +256,5 @@
     if (!renderer && wantedFrames.length) { failed = false; prepareFrames(wantedFrames); return; }
     if (ready()) warmFrames();
   }
-  global.TerrainOrbit = { prepareFrames: prepareFrames, prepareLighting: prepareLighting, activateLighting: activateLighting, discardPreparedLighting: discardPreparedLighting, render: render, ready: ready, suspendGPU: suspendGPU, resumeGPU: resumeGPU, inspect: function () { return { ready: ready(), failed: failed, contextLost: contextLost, gpuSuspended: gpuSuspended, rendererError: rendererError, preparedFrames: preparedFrames, lightingReady: !!lights, lightingPrepared: !!pendingLights, width: width, height: height, geometries: renderer ? renderer.info.memory.geometries : 0, textures: renderer ? renderer.info.memory.textures : 0, glError: renderer ? renderer.getContext().getError() : null }; } };
+  global.TerrainOrbit = { prepareFrames: prepareFrames, prepareFramesAsync: prepareFramesAsync, prepareLighting: prepareLighting, activateLighting: activateLighting, discardPreparedLighting: discardPreparedLighting, render: render, ready: ready, suspendGPU: suspendGPU, resumeGPU: resumeGPU, inspect: function () { return { ready: ready(), failed: failed, contextLost: contextLost, gpuSuspended: gpuSuspended, rendererError: rendererError, preparedFrames: preparedFrames, lightingReady: !!lights, lightingPrepared: !!pendingLights, width: width, height: height, geometries: renderer ? renderer.info.memory.geometries : 0, textures: renderer ? renderer.info.memory.textures : 0, glError: renderer ? renderer.getContext().getError() : null }; } };
 })(window);

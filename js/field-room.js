@@ -30,9 +30,9 @@
     if(state.shell)return;
     document.body.insertAdjacentHTML('beforeend','<section id="field-room" data-state="closed" role="dialog" aria-modal="true" aria-labelledby="field-room-title" aria-hidden="true">' +
       '<header class="f-bar"><button type="button" data-f-action="close">← 返回场</button><h2 id="field-room-title">场 <span>/ FIELD</span></h2></header>' +
-      '<div class="f-body"><section class="f-map" aria-label="球场导航"><canvas class="f-stadium-canvas" aria-hidden="true"></canvas><svg class="f-stadium-leaders" aria-hidden="true"></svg><div class="f-map__caption"><span>我和棒垒</span><h3>回到球场</h3><p>“其他运动都没有棒球棒！”</p></div>' +
+      '<div class="f-body"><section class="f-map" aria-label="球场导航"><canvas class="f-stadium-canvas" aria-hidden="true"></canvas><svg class="f-stadium-leaders" aria-hidden="true"></svg><div class="f-map__caption"><h3>回到球场</h3><p>为什么棒球是最好的运动？<br>因为其他的运动都没有棒球棒！</p></div>' +
       '<div class="f-diamond">'+fieldSVG()+'<nav aria-label="选择球场内容">' + sections.map(function(s,i){return '<button type="button" data-f-section="'+s.id+'" style="--x:'+s.x+'%;--y:'+s.y+'%" aria-controls="f-content" aria-current="false"><span class="m-landmark__row"><span class="m-landmark__badge">'+String(i+1).padStart(2,'0')+'</span><span class="m-landmark__cn">'+s.name+'</span></span></button>';}).join('') +
-      '</nav></div><footer class="f-map__footer"><span>Since 2015</span><span>选择场上的一个位置 ↗</span></footer></section>' +
+      '</nav></div><footer class="f-map__footer"><span>Since 2015</span></footer></section>' +
       '<section class="f-reading" aria-label="球场内容" tabindex="-1" hidden><div class="f-chapter-bar"><button type="button" data-f-action="overview">↙ 回到球场</button><span data-f-chapter-label></span><button type="button" data-f-action="next">下一站 →</button></div><div id="f-content"></div></section></div>' +
       '<div class="f-lightbox" role="dialog" aria-modal="true" aria-label="照片浏览" hidden><div class="f-lightbox__bar"><span data-f-photo-count></span><button type="button" data-f-action="photo-close" aria-label="关闭照片">关闭 ×</button></div>' +
       '<button class="f-photo-prev" type="button" data-f-action="photo-prev" aria-label="上一张照片">←</button><figure><img alt=""><figcaption></figcaption></figure><button class="f-photo-next" type="button" data-f-action="photo-next" aria-label="下一张照片">→</button></div></section>');

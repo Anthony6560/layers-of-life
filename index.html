@@ -75,7 +75,6 @@
     <header class="m-noscript__head">
       <div class="m-noscript__rule"></div>
       <h1 class="m-noscript__title">坐标之外</h1>
-      <p class="m-noscript__sub">Layers of Life —— 一张会随内容长高的地形图。开启 JavaScript 后，可点击地标进入不同场域。</p>
     </header>
 
     <ul>
@@ -104,16 +103,6 @@
         <span class="m-noscript__name">场<span>FIELD</span></span>
         <span class="m-noscript__desc">棒垒球 · 体感 —— 球还没到，先站到它要去的地方。</span>
       </li>
-      <li class="m-noscript__item" data-field="about">
-        <span class="m-noscript__badge">G</span>
-        <span class="m-noscript__name">关于</span>
-        <span class="m-noscript__desc">五件事做到最后是同一个动作：先看清楚，再动手做出来。</span>
-      </li>
-      <li class="m-noscript__item" data-field="notes">
-        <span class="m-noscript__badge">F</span>
-        <span class="m-noscript__name">印记</span>
-        <span class="m-noscript__desc">碎片笔记的聚合流，按时间倒序。</span>
-      </li>
     </ul>
 
     <p class="m-noscript__foot">
@@ -140,9 +129,6 @@
   <div id="landmark-layer" tabindex="-1">
     <div id="map-world"></div>
   </div>
-
-  <!-- L4 时间控件 / 比例尺 / 图廓坐标 / 签名 -->
-  <div id="map-controls"></div>
 
   <!-- 左上角引导文案（文案来自 site.data.js 的 hero.*） -->
   <div id="hero-caption"></div>
@@ -172,7 +158,7 @@
      ══════════════════════════════════════════════════════════════════════════ -->
 
 <!-- 1. 数据层：必须最先 -->
-<script src="assets/data/site.data.js?v=20261008-music-room"></script>
+<script src="assets/data/site.data.js?v=20261012-home-cleanup"></script>
 <script src="assets/data/works.data.js?v=20261008-play-corrected"></script>
 <script src="assets/data/play.visuals.data.js?v=20261008-play-corrected"></script>
 <script src="assets/data/notes.data.js?v=20261003-smooth-cache"></script>
@@ -193,7 +179,7 @@
 <script src="js/moments-room.js?v=20261011-natural-masonry"></script>
 <script src="js/field-pendant.js?v=20261010-pendant-members"></script>
 <script src="assets/data/field.pendant.catalog.data.js?v=20261010-pendant-members"></script>
-<script src="js/field-room.js?v=20261011-natural-masonry"></script>
+<script src="js/field-room.js?v=20261012-field-copy"></script>
 <script src="js/rhythm-visualizer.js?v=20261008-play-visuals"></script>
 <script src="js/rhythm-player.js?v=20261008-play-lifecycle"></script>
 
@@ -211,15 +197,16 @@
 <script src="js/environment.js?v=20261003-smooth-cache"></script>
 <!-- terrain.js 是纯计算模块（高度场 / marching squares / 山体阴影 / extent），
      不碰 DOM、无依赖，必须先于 map-engine.js 加载 -->
-<script src="js/terrain.js?v=20261003-smooth-cache"></script>
+<script src="js/terrain.js?v=20261012-worker"></script>
 <script src="js/landmarks.js?v=20261007-unified-orbit"></script>
-<script src="js/terrain-orbit.js?v=20261008-gpu-lifecycle"></script>
-<script src="js/map-engine.js?v=20261010-field-room"></script>
+<script src="js/terrain-orbit.js?v=20261012-gpu-preload"></script>
+<script src="js/map-engine.js?v=20261012-worker"></script>
+<script src="js/terrain-precompute.js?v=20261012-worker"></script>
 <script src="js/camera.js?v=20261007-unified-orbit"></script>
 
 <!-- 5. 启动器：必须最后 -->
-<script src="js/intro-screen.js?v=20261009-independent-type"></script>
-<script src="js/app.js?v=20261011-reviewed-moments"></script>
+<script src="js/intro-screen.js?v=20261012-isolated-type"></script>
+<script src="js/app.js?v=20261012-parallel-preload"></script>
 </body>
 </html>
 <style id="minimal-interface-overrides">
@@ -259,138 +246,5 @@
     document.body.classList.toggle('is-day',!dark);
   }
   if(document.body)syncBody();else document.addEventListener('DOMContentLoaded',syncBody,{once:true});
-}());
-</script>
-<style id="final-interface-cleanup">
-  .m-time-control,.m-time-widget,.m-home-time,.home-time-control,.time-control,[data-time-control],#time-control,#timezone-control{display:none!important}
-  [data-ui-corner-hidden="true"]{display:revert!important}
-</style>
-<script>
-(function(){
-  var replacement='为什么棒球是最好的运动？<br>因为别的运动都没有棒球棒！';
-  function isLeaf(el){return el.children.length===0&&el.textContent.trim();}
-  function compactTarget(el){
-    var target=el;
-    while(target.parentElement&&target.parentElement!==document.body&&target.parentElement.children.length<=2&&target.parentElement.textContent.trim()===target.textContent.trim())target=target.parentElement;
-    return target;
-  }
-  function cleanField(){
-    var field=document.querySelector('.f-room,.field-room,[data-room="field"],#field-room')||document.body;
-    field.querySelectorAll('*').forEach(function(el){
-      if(!isLeaf(el))return;
-      var text=el.textContent.trim();
-      if(text==='我和棒垒'||text.indexOf('我和棒垒')===0){
-        compactTarget(el).setAttribute('data-ui-corner-hidden','true');
-      }else if(text.indexOf('选择场上的一个位置')!==-1){
-        compactTarget(el).setAttribute('data-ui-corner-hidden','true');
-      }else if(text.indexOf('回到球场')!==-1||text.indexOf('球还没到')!==-1||text.indexOf('其他运动都没有棒球棒')!==-1||text.indexOf('别的运动都没有棒球棒')!==-1){
-        el.innerHTML=replacement;
-      }
-    });
-  }
-  function cleanHome(){
-    return;
-    document.querySelectorAll('body *').forEach(function(el){
-      if(!isLeaf(el))return;
-      var text=el.textContent.trim();
-      if(!text||text.indexOf('坐标之外')!==-1)return;
-      if(text.indexOf('时区')!==-1||text.indexOf('当前时间')!==-1||text.indexOf('太阳位置')!==-1||text.indexOf('时间调整')!==-1){
-        compactTarget(el).setAttribute('data-ui-corner-hidden','true');
-        return;
-      }
-      var parent=el.closest('button,a,[role="button"]');
-      if(parent)return;
-      var anchor=el;
-      while(anchor.parentElement&&anchor!==document.body&&getComputedStyle(anchor).position==='static')anchor=anchor.parentElement;
-      var style=getComputedStyle(anchor);
-      if(style.position!=='fixed'&&style.position!=='absolute')return;
-      var rect=anchor.getBoundingClientRect();
-      var nearLeft=rect.left<90,nearRight=rect.right>innerWidth-90,nearTop=rect.top<90,nearBottom=rect.bottom>innerHeight-90;
-      var isSmallLayer=rect.width<innerWidth*.55&&rect.height<innerHeight*.55;
-      if(anchor===document.body||anchor.id==='app'||anchor.tagName==='MAIN'||!isSmallLayer)return;
-      if((nearLeft||nearRight)&&(nearTop||nearBottom))anchor.setAttribute('data-ui-corner-hidden','true');
-    });
-  }
-  function clean(){
-    document.querySelectorAll('[data-ui-corner-hidden]').forEach(function(el){el.removeAttribute('data-ui-corner-hidden');});
-    cleanField();
-  }
-  function install(){return;}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
-}());
-</script>
-<script>
-(function(){
-  function cleanHomeChrome(){
-    return;
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(cleanHomeChrome,1800);},{once:true});
-  else setTimeout(cleanHomeChrome,1800);
-}());
-</script>
-<script>
-(function(){
-  function removeHomeAuxiliary(){
-    var selectors='[data-scale],[data-coordinate],[data-coordinates],.m-scale,.scale-bar,.m-coordinate,.coordinates,.coordinate-readout';
-    document.querySelectorAll(selectors).forEach(function(el){el.style.display='none';});
-    document.querySelectorAll('body *').forEach(function(el){
-      if(el.children.length||!el.textContent.trim())return;
-      var text=el.textContent.trim();
-      if(text==='坐标之外')return;
-      if(text.indexOf('待填·一句手写体签名')!==-1||text==='比例尺'||text.indexOf('比例尺')!==-1||text.indexOf('经度')!==-1||text.indexOf('纬度')!==-1||text.indexOf('海拔')!==-1||text.indexOf('坐标：')!==-1||text.indexOf('坐标:')!==-1){
-        var target=el.parentElement&&el.parentElement!==document.body&&el.parentElement.children.length<=3?el.parentElement:el;
-        target.style.display='none';
-      }
-    });
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(removeHomeAuxiliary,1200);},{once:true});else setTimeout(removeHomeAuxiliary,1200);
-}());
-</script>
-<script>
-(function(){
-  function removeExactHomeLabels(){
-    document.querySelectorAll('body *').forEach(function(el){
-      if(el.children.length||!el.textContent.trim())return;
-      var raw=el.textContent.trim();
-      var compact=raw.replace(/\s+/g,'').toUpperCase();
-      var isScale=compact.indexOf("34°16'N108°56'E")!==-1||compact.indexOf('SCALE1:55900')!==-1||compact.indexOf('CONTOURINTERVAL10M')!==-1;
-      var isSignature=raw.indexOf('待填')!==-1&&raw.indexOf('手写体签名')!==-1;
-      if(!isScale&&!isSignature)return;
-      var target=el.parentElement&&el.parentElement!==document.body&&el.parentElement.children.length<=3?el.parentElement:el;
-      target.style.display='none';
-    });
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(removeExactHomeLabels,1600);},{once:true});else setTimeout(removeExactHomeLabels,1600);
-}());
-</script>
-<script>
-(function(){
-  function removeHomeCopy(){
-    var phrases=['一张会随内容长高的地形图','点击地标进入 · 视角将随内容自动变换'];
-    document.querySelectorAll('body *').forEach(function(el){
-      if(el.children.length||!el.textContent.trim())return;
-      var text=el.textContent.trim();
-      if(phrases.some(function(phrase){return text.indexOf(phrase)!==-1;})){
-        var target=el.parentElement&&el.parentElement!==document.body&&el.parentElement.children.length<=3?el.parentElement:el;
-        target.style.display='none';
-      }
-    });
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(removeHomeCopy,1200);},{once:true});else setTimeout(removeHomeCopy,1200);
-}());
-</script>
-<script>
-(function(){
-  function removeAboutAndMark(){
-    document.querySelectorAll('body *').forEach(function(el){
-      if(el.children.length||!el.textContent.trim())return;
-      var text=el.textContent.trim();
-      if(text!=='关于'&&text!=='印记')return;
-      var target=el.closest('button,a,[role="button"]');
-      if(!target)target=el.parentElement&&el.parentElement!==document.body&&el.parentElement.children.length<=3?el.parentElement:el;
-      target.style.display='none';
-    });
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(removeAboutAndMark,1200);},{once:true});else setTimeout(removeAboutAndMark,1200);
 }());
 </script>

@@ -9,15 +9,11 @@ window.SITE_DATA = {
   "meta": {
     "title": "坐标之外",
     "titleEn": "Layers of Life",
-    "author": "（待填 · 你的名字）",
-    "signature": "（待填 · 一句手写体签名）",
-    "_todo": "author 与 signature 目前是占位值。请把括号里的文字换成你自己的名字和一句签名；换完后可以把这条 _todo 整行删掉（连同它上一行末尾的逗号一起处理，见《07-内容填充指南》）。"
+    "author": "枕套"
   },
   "hero": {
     "headline": "坐标之外",
-    "headlineEn": "Layers of Life",
-    "subline": "一张会随内容长高的地形图",
-    "hint": "点击地标进入 · 视角将随内容自动变换"
+    "headlineEn": "Layers of Life"
   },
   "messages": {
     "emptyWorks": "这一片场还没有作品。",
@@ -110,8 +106,6 @@ window.SITE_DATA = {
       "intro": "球还没到，先站到它要去的地方。"
     }
   ],
-  "notesLandmark": { "landmark": "F", "name": "印记", "position": { "x": 0.64, "y": 0.62 } },
-  "aboutLandmark": { "landmark": "G", "name": "关于", "position": { "x": 0.46, "y": 0.46 } },
 
   "environment": {
     "_说明": "环境层不调用外部服务。太阳位置由经纬度和设备时间计算；mood/weather 预留给后续数据源。",

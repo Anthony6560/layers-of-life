@@ -20,7 +20,7 @@
      ⑤ 5 个地标图形语言（docs/08 §一 C-8）：contour / aperture / wave / swirl / sector。
    ============================================================================ */
 
-(function () {
+(function installMapEngine() {
   "use strict";
 
   if (!window.Scene) { window.Scene = {}; }
@@ -686,6 +686,7 @@
     rasterFrames: null, pendingRaster: null, rasterView: null
   };
   var preloadWaiters = [];
+  var initialWorkerCycle = null;
   var renderFrameOverride = null;
   var rasterizing = false;
   var rasterLayerOverride = null;
@@ -865,7 +866,7 @@
     return T.sampleBilinear(hf, x, y);
   }
 
-  function buildCombinedContourFrame(T, content, ambient, state, cfg) {
+  function buildCombinedContourFrame(T, content, ambient, state, cfg, compact) {
     var offsetX = quantize(state.driftX, 0.0015);
     var offsetY = quantize(state.driftY, 0.0015);
     var heightScale = quantize(state.height || 1, 0.02);
@@ -887,7 +888,8 @@
       contourInterval: interval
     });
     var contours = T.extractContours(hf, interval);
-    var traced = typeof T.traceContours === "function" ? T.traceContours(contours, hf) : [];
+    // The unified surface and segment batches do not consume closed rings.
+    var traced = !compact && typeof T.traceContours === "function" ? T.traceContours(contours, hf) : [];
     /* 0/1 = 远景普通/计曲线，2/3 = 过渡，4/5 = 主体。每段只进入一个桶，
        因而不存在两套线在同一位置叠加；三档仅改变视觉权重。 */
     var batches = [[], [], [], [], [], []];
@@ -906,7 +908,8 @@
       }
     }
     return {
-      hf: hf, contours: contours, traced: traced, batches: batches,
+      hf: hf, contours: compact ? [] : contours, traced: traced,
+      batches: compact ? batches.map(function (batch) { return new Float32Array(batch); }) : batches,
       contentHf: content.hf, ambientHf: ambient.hf,
       state: { height: heightScale, driftX: offsetX, driftY: offsetY,
                phase: phase, warp: warp }
@@ -1055,6 +1058,21 @@
     var lightAt = clockState && clockState.manual ? clockState.dateMs : Date.now();
     var light = E && E.getLight ? E.getLight(lightAt) : null;
     var lightKey = light ? shadowLightKey(light, lightAt) : null;
+    if (initialWorkerCycle && rasterCache.gpuOnly && window.TerrainOrbit) {
+      window.TerrainOrbit.prepareLighting(initialWorkerCycle.shadows);
+      window.TerrainOrbit.activateLighting(Date.now());
+      var shadowMarker = document.createElement("canvas"); shadowMarker.width = shadowMarker.height = 1;
+      shadowRasterCache.frames = initialWorkerCycle.shadows.map(function () { return shadowMarker; });
+      shadowRasterCache.ready = true;
+      shadowRasterCache.key = initialWorkerCycle.lightKey;
+      shadowRasterCache.view = baseView;
+      combinedContourCache.lightKey = initialWorkerCycle.lightKey;
+      initialWorkerCycle = null;
+      notifyPreload({ phase: "shadow", progress: 1, ready: true });
+      scheduleLightingLookahead(Date.now());
+      return;
+    }
+    initialWorkerCycle = null;
     if (!light || !startLightingLookahead(light, lightKey,
         Math.floor(lightAt / LIGHT_SLOT_MS), Date.now())) {
       notifyPreload({ phase: "raster", progress: 1, ready: rasterCache.ready });
@@ -1093,6 +1111,16 @@
     rasterCache.pending = pending;
     rasterCache.pendingView = baseView;
     notifyPreload({ phase: "raster", progress: 0.5, ready: false });
+
+    // The GPU already draws altitude, contours and light from cached world
+    // geometry. Baking a second complete Canvas loop is redundant in this path.
+    if (window.TerrainOrbit && window.TerrainOrbit.prepareFrames(frames)) {
+      var marker = document.createElement("canvas"); marker.width = marker.height = 1;
+      rasterCache.gpuOnly = true;
+      finishRasterPreload(generation, job, frames.map(function () { return marker; }), baseView, frames);
+      return;
+    }
+    rasterCache.gpuOnly = false;
 
     function capture(index) {
       if (generation !== combinedContourCache.generation || job !== rasterCache.job) {
@@ -1156,7 +1184,20 @@
     capture(0);
   }
 
-  function startCombinedCycleBuild(T, content, ambient, cfg, key, buildLight, lightKey) {
+  function startCombinedCycleBuild(T, content, ambient, cfg, key, buildLight, lightKey, localFallback) {
+    if (!localFallback && window.TerrainPrecompute) {
+      discardLightingLookahead();
+      var workerGeneration = ++combinedContourCache.generation;
+      combinedContourCache.building = true;
+      combinedContourCache.pendingKey = key;
+      window.TerrainPrecompute.prepare(terrainWorkerInput()).then(function (cycle) {
+        if (workerGeneration !== combinedContourCache.generation) return;
+        combinedContourCache.building = false; combinedContourCache.pendingKey = null;
+        if (cycle) { adoptWorkerCycle(cycle); startRasterPreload(true); }
+        else { startCombinedCycleBuild(T, content, ambient, cfg, key, buildLight, lightKey, true); }
+      });
+      return;
+    }
     discardLightingLookahead();
     var E = EnvironmentModule();
     var previousCycleStart = combinedContourCache.startedAt;
@@ -1350,6 +1391,15 @@
       x: sourceView.x, y: sourceView.y, scale: sourceView.scale, w: sourceVw, h: sourceVh,
       cacheW: cacheW, cacheH: cacheH
     };
+    if (rasterCache.gpuOnly && window.TerrainOrbit && window.TerrainOrbit.ready()) {
+      var marker = document.createElement("canvas"); marker.width = marker.height = 1;
+      lightingLookahead.rasterFrames = shadowSurfaces.map(function () { return marker; });
+      lightingLookahead.rasterView = baseView;
+      lightingLookahead.building = false; lightingLookahead.ready = true;
+      lightingLookahead.phase = "ready";
+      if (Date.now() >= lightingLookahead.activateAt) activatePreparedLighting(Date.now());
+      return;
+    }
     lightingLookahead.phase = "raster";
     lightingLookahead.pendingRaster = pending;
 
@@ -1456,7 +1506,7 @@
       var frame = sourceFrames[index];
       var grid = Math.min(SHADOW_GRID, frame.hf.n - 1);
       var built = buildSurface(frame.hf, grid, veOf(1), buildLight,
-        { castShadows: true });
+        { castShadows: buildLight.mode !== 'night' });
       var stateKey = frame.state ? [frame.state.phase, frame.state.warp].join(":") : "";
       surfaces[index] = {
         hf: frame.hf, grid: grid, lightKey: lightKey,
@@ -1821,7 +1871,7 @@
       if (combinedContourCache.ready) { startRasterPreload(true); }
     }
 
-    if (!running) { render(frameNow()); }
+    if (!running && !initialWorkerCycle) { render(frameNow()); }
   }
 
   function frameNow() {
@@ -2140,7 +2190,7 @@
     var target = targetCtx || ctx;
     var unified = ensureCombinedContours(now);
     var c = unified && unified.current;
-    if (!c || !c.hf || !c.traced || !c.traced.length || !t.ambientSurfaceColor) { return; }
+    if (!c || !c.hf || !t.ambientSurfaceColor) { return; }
     var p = typeof unified.progress === "number" ? unified.progress : 1;
     function drawFrame(frame, cache, morphCache, morph) {
       if (!frame || !frame.hf) { return; }
@@ -2395,6 +2445,7 @@
       var phase = rasterPosition(now), style = tokens();
       return window.TerrainOrbit.render({ frames: rasterCache.contourFrames, index: phase.index, progress: phase.progress, width: vw, height: vh, dpr: dpr, mapW: mapW, mapH: mapH, ve: VE, yaw: camYaw, pitch: camPitch, view: view, translateX: translateX, translateY: translateY, tokens: style, dim: 1 - (1 - style.gridDimOpacity / Math.max(style.gridMinorOpacity, .001)) * dimCur, now: now, ctx: ctx, canvas: cv });
     }
+    if (rasterCache.gpuOnly) { return false; }
     if (rasterCache.view.w !== vw || rasterCache.view.h !== vh ||
         rasterCache.yaw !== camYaw || rasterCache.pitch !== camPitch) {
       rasterCache.ready = false;
@@ -2490,6 +2541,9 @@
      ══════════════════════════════════════════════════════════════════════════ */
 
   function paint(translateX, translateY, now) {
+    // Until cached geometry is uploaded, the home is hidden by the intro.
+    // Do not render several expensive CPU fallback frames during boot.
+    if (initialWorkerCycle && !rasterCache.ready && !rasterizing) { return; }
     var t = tokens();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, vw, vh);   /* 不填底色，让 body 的纸张纹透上来 */
@@ -3163,6 +3217,81 @@
 
   function invScale(scale) { return scale ? (1 / scale) : 1; }
 
+  // Shared pure computation: the worker uses these same functions as the
+  // renderer, so height, contour alignment and lighting cannot drift apart.
+  function computeWorkerCycle(input, reusable, progress) {
+    window.SITE_DATA = input.site;
+    window.WORKS_DATA = { works: input.works };
+    window.NOTES_DATA = { notes: input.notes };
+    cached = input.tokens;
+    updateProjection();
+    if (!reusable) { terrainCache.sig = null; ambientCache.sig = null; }
+    var T = TerrainModule(), cfg = environmentConfig(), count = input.states.length;
+    var content = reusable ? reusable.content : ensureTerrain();
+    var ambient = reusable ? reusable.ambient : ensureAmbientTerrain();
+    var frames = reusable ? reusable.frames : new Array(count + 1);
+    var light = input.light, shadows = new Array(count + 1);
+    var mainGrid = Math.min(cached.surfaceGrid, content.hf.n - 1);
+    var mainSurface = Object.assign({ hf: content.hf, traced: content.traced, grid: mainGrid,
+      lightKey: light.key, stateKey: 'main:' + light.key },
+      buildSurface(content.hf, mainGrid, veOf(1), light, { castShadows: false }));
+    for (var i = 0; i < count; i++) {
+      var frame = reusable ? frames[i] : buildCombinedContourFrame(T, content, ambient, input.states[i], cfg, true);
+      var grid = Math.min(cached.ambientSurfaceGrid, frame.hf.n - 1);
+      frame.surfaceCache = Object.assign({ hf: frame.hf, grid: grid, lightKey: light.key,
+        stateKey: [frame.state.phase, frame.state.warp, 1, 0, 0].join(':') },
+        buildSurface(frame.hf, grid, veOf(1), light, { castShadows: false }));
+      frames[i] = frame;
+      var shadowGrid = Math.min(SHADOW_GRID, frame.hf.n - 1);
+      shadows[i] = Object.assign({ hf: frame.hf, grid: shadowGrid, lightKey: input.lightKey,
+        stateKey: frame.surfaceCache.stateKey, traced: frame.traced },
+        buildSurface(frame.hf, shadowGrid, veOf(1), light, { castShadows: light.mode !== 'night' }));
+      if (progress) progress((i + 1) / count);
+    }
+    frames[count] = frames[0]; shadows[count] = shadows[0];
+    if (!frames[0].meshSource) {
+      var hf = frames[0].hf, n = hf.n, positions = new Float32Array(n * n * 3);
+      var indices = new Uint32Array((n - 1) * (n - 1) * 6), offset = 0;
+      for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) {
+        var k = y * n + x; positions[k * 3] = hf.x0 + x * hf.cellX; positions[k * 3 + 1] = hf.y0 + y * hf.cellY;
+        if (x < n - 1 && y < n - 1) { indices.set([k, k + 1, k + n + 1, k, k + n + 1, k + n], offset); offset += 6; }
+      }
+      frames[0].meshSource = { positions: positions, indices: indices };
+    }
+    shareCycleLightRange(frames); shareSurfaceLightRange(shadows);
+    return { content: content, ambient: ambient, frames: frames, mainSurface: mainSurface,
+      shadows: shadows, lightKey: input.lightKey,
+      key: content.sig + '|' + ambient.sig + '|' + ambientSignalKey(input.states[0]) +
+        '|contour-grid:' + (Number(cfg.combinedGridSize) || 384) };
+  }
+
+  function terrainWorkerInput() {
+    var E = EnvironmentModule(), cfg = environmentConfig();
+    var clock = E.getClock(), at = clock.manual ? clock.dateMs : Date.now();
+    var count = Math.max(8, Math.min(32, Math.round(Number(cfg.cycleFrames) || 16)));
+    var states = [];
+    for (var i = 0; i < count; i++) states.push(E.getAmbientStateAtPhase(i / count * Math.PI * 2));
+    var light = E.getLight(at);
+    return { site: window.SITE_DATA, works: worksList().map(function (w) { return { field: w.field }; }),
+      notes: notesList().map(function (n) { return { field: n.field }; }), tokens: tokens(),
+      states: states, light: light, lightKey: shadowLightKey(light, at) };
+  }
+
+  function adoptWorkerCycle(cycle) {
+    terrainCache = cycle.content; ambientCache = cycle.ambient;
+    combinedContourCache.generation++;
+    combinedContourCache.frames = cycle.frames;
+    combinedContourCache.frameCount = cycle.frames.length - 1;
+    combinedContourCache.activeContent = cycle.content;
+    combinedContourCache.activeMainSurface = cycle.mainSurface;
+    combinedContourCache.key = cycle.key;
+    combinedContourCache.lightKey = cycle.lightKey;
+    combinedContourCache.ready = true; combinedContourCache.building = false;
+    combinedContourCache.startedAt = combinedContourCache.startedAt || Date.now();
+    initialWorkerCycle = cycle;
+    updateProjection();
+  }
+
   /* ══════════════════════════════════════════════════════════════════════════
      导出
      ══════════════════════════════════════════════════════════════════════════ */
@@ -3180,6 +3309,12 @@
   };
 
   Scene._.MapEngine = {
+    workerSource: '(' + installMapEngine.toString() + ')();',
+    prepareTerrainData: function () {
+      return window.TerrainPrecompute ? window.TerrainPrecompute.prepare(terrainWorkerInput()) : Promise.resolve(null);
+    },
+    adoptTerrainData: adoptWorkerCycle,
+    computeWorkerCycle: computeWorkerCycle,
     /* —— 契约接口（与 v1 完全一致，app.js / camera.js 无需改动）—— */
     init:            init,
     resize:          resize,

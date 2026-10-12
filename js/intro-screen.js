@@ -3,6 +3,7 @@
   var host, lines = [], row = 0, count = 0, timer = 0, due = 0, pausedAt = 0;
   var finished = false, dismissed = false, enter, showAll, onEnter;
   var enterDue = 0, enterTimer = 0;
+  var completionCallbacks = [];
   var blocked = [], motion;
   function schedule() {
     if (!document.hidden) timer = global.setTimeout(type, Math.max(0, due - performance.now()));
@@ -15,8 +16,7 @@
   function type() {
     timer = 0;
     if (finished || dismissed) return;
-    // Reveal exactly one character per callback. If terrain work blocks the
-    // main thread, the intro must wait instead of catching up from the middle.
+    // Reveal one character per callback; scene preparation starts after typing.
     var line = lines[row], char = line.chars[count];
     count++;
     paint(line, count);
@@ -37,6 +37,19 @@
     if (host) host.dataset.typing = 'complete';
     enterDue = performance.now() + 2000;
     maybeEnter();
+    flushCompletion();
+  }
+  function flushCompletion() {
+    if (!finished || !completionCallbacks.length) return;
+    var callbacks = completionCallbacks.splice(0);
+    // Paint the last character before starting any expensive scene work.
+    global.requestAnimationFrame(function () {
+      global.setTimeout(function () { callbacks.forEach(function (callback) { callback(); }); }, 0);
+    });
+  }
+  function whenComplete(callback) {
+    completionCallbacks.push(callback);
+    flushCompletion();
   }
   function maybeEnter() {
     if (!finished || !onEnter || dismissed) return;
@@ -70,8 +83,9 @@
     if (map && moveFocus) map.focus({ preventScroll: true });
   }
   function start() {
+    if (host) return;
     host = document.getElementById('terrain-preloader');
-    if (!host) return;
+    if (!host) { finished = true; flushCompletion(); return; }
     enter = document.getElementById('intro-enter');
     showAll = document.getElementById('intro-show-all');
     lines = Array.prototype.map.call(host.querySelectorAll('[data-intro-line]'), function (element) {
@@ -106,5 +120,5 @@
     enter.disabled = false;
     maybeEnter();
   }
-  global.IntroScreen = { start: start, ready: ready };
+  global.IntroScreen = { start: start, ready: ready, whenComplete: whenComplete };
 })(window);

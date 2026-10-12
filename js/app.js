@@ -326,7 +326,6 @@
     /* 反向缩放：任何缩放级别下标注字号不变（05 §5.5）*/
     worldEl.style.setProperty("--inv", (1 / view.scale).toFixed(4));
 
-    updateScaleReadout(view.scale);
     updateLabelDensity(view.scale);
   }
 
@@ -338,26 +337,11 @@
   }
 
   /* ══════════════════════════════════════════════════════════════════════════
-     7 —— L4 控件层
+     7 —— 昼夜环境
      ══════════════════════════════════════════════════════════════════════════ */
 
-  var scaleLabel = null, scaleTag = null;
-  var timeInput = null, timezoneSelect = null, timeReadout = null, sunReadout = null;
   var environmentMode = "", environmentLightKey = "", clockTimer = 0;
-
-  var TIMEZONES = [
-    [-480, "UTC−08:00"], [-300, "UTC−05:00"], [0, "UTC±00:00"],
-    [330, "UTC+05:30"], [480, "UTC+08:00"], [540, "UTC+09:00"],
-    [600, "UTC+10:00"], [720, "UTC+12:00"]
-  ];
-
-  function two(v) { return v < 10 ? "0" + v : String(v); }
-
-  function datetimeInputValue(ms, offset) {
-    var d = new Date(Number(ms) + Number(offset || 0) * 60000);
-    return d.getUTCFullYear() + "-" + two(d.getUTCMonth() + 1) + "-" + two(d.getUTCDate()) +
-      "T" + two(d.getUTCHours()) + ":" + two(d.getUTCMinutes());
-  }
+  var sceneInitialized = false;
 
   function datetimeInputMs(value, offset) {
     var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(String(value || ""));
@@ -381,168 +365,41 @@
     }
     if (forceRender || environmentLightKey !== light.key) {
       environmentLightKey = light.key;
-      if (Engine && typeof Engine.refreshEnvironment === "function") {
+      if (sceneInitialized && Engine && typeof Engine.refreshEnvironment === "function") {
         Engine.refreshEnvironment();
-      } else if (Engine) {
+      } else if (sceneInitialized && Engine) {
         Engine.renderStatic();
       }
     }
   }
 
-  function updateClockUI(forceRender) {
-    if (!Environment || !Environment.getClock) { return; }
-    var c = Environment.getClock();
-    var light = Environment.getLight(c.dateMs);
-    if (timeReadout) {
-      timeReadout.textContent = Environment.formatZoned(c.dateMs, c.timezoneOffsetMinutes) +
-        "  " + c.timezoneLabel + (c.manual ? " · MANUAL" : " · LIVE");
-    }
-    if (sunReadout) {
-      var modeName = light.mode === "night" ? "夜间" : (light.mode === "twilight" ? "晨昏" : "白天");
-      sunReadout.textContent = modeName + " · 太阳高度 " + light.elevation.toFixed(1) +
-        "° · 方位 " + light.azimuth.toFixed(0) + "°";
-    }
-    if (timeInput && document.activeElement !== timeInput) {
-      timeInput.value = datetimeInputValue(c.dateMs, c.timezoneOffsetMinutes);
-    }
-    applyEnvironmentTheme(light, !!forceRender);
+  function updateEnvironment(forceRender) {
+    if (!Environment || !Environment.getClock) return;
+    applyEnvironmentTheme(Environment.getLight(Environment.getClock().dateMs), !!forceRender);
   }
 
-  function applyManualClock() {
-    if (!Environment || !timeInput || !timezoneSelect) { return; }
-    var offset = Number(timezoneSelect.value);
-    var ms = datetimeInputMs(timeInput.value, offset);
-    if (!isFinite(ms)) { return; }
-    Environment.setClock({
-      manual: true, dateMs: ms, timezoneOffsetMinutes: offset,
-      timezoneLabel: timezoneSelect.options[timezoneSelect.selectedIndex].text
-    });
-    updateClockUI(true);
+  function configurePreviewClock() {
+    if (!Environment || !Environment.getClock) return;
+    try {
+      var params = new URLSearchParams(window.location.search || "");
+      var value = params.get("previewTime"), offset = Number(params.get("previewTz"));
+      var ms = value && isFinite(offset) ? datetimeInputMs(value, offset) : NaN;
+      if (isFinite(ms)) Environment.setClock({ manual: true, dateMs: ms,
+        timezoneOffsetMinutes: offset, timezoneLabel: Environment.offsetLabel(offset) });
+    } catch (error) { /* Ignore invalid preview parameters. */ }
   }
 
-  function buildControls() {
-    var host = $("map-controls");
-    if (!host) { return; }
-
-    /* 手动平移 / 旋转 / 缩放已关闭。镜头只允许由地标点击后的 focusTo
-       与关闭内容后的 reset 驱动，因此不再生成缩放控件。 */
-
-    /* ---- 临时时间实验台：用于检查实时太阳阴影、昼夜和晨昏过渡 ---- */
-    if (Environment && Environment.getClock) {
-      var clock = Environment.getClock();
-      /* 便于视觉回归：?previewTime=2026-10-01T18:30&previewTz=480 */
-      try {
-        var previewParams = new URLSearchParams(window.location.search || "");
-        var previewTime = previewParams.get("previewTime");
-        var previewTz = Number(previewParams.get("previewTz"));
-        if (previewTime && isFinite(previewTz)) {
-          var previewMs = datetimeInputMs(previewTime, previewTz);
-          if (isFinite(previewMs)) {
-            Environment.setClock({ manual: true, dateMs: previewMs,
-              timezoneOffsetMinutes: previewTz, timezoneLabel: Environment.offsetLabel(previewTz) });
-            clock = Environment.getClock();
-          }
-        }
-      } catch (previewError) { /* 老浏览器忽略预览参数 */ }
-      var timePanel = el("section", "m-time-control");
-      timePanel.setAttribute("aria-label", "太阳时间与时区预览");
-      timeReadout = el("output", "m-time-control__clock", "");
-      sunReadout = el("div", "m-time-control__sun", "");
-      timeInput = el("input", "m-time-control__datetime");
-      timeInput.type = "datetime-local";
-      timeInput.step = "60";
-      timeInput.setAttribute("aria-label", "预览日期与时间");
-      timezoneSelect = el("select", "m-time-control__zone");
-      timezoneSelect.setAttribute("aria-label", "预览时区");
-      for (var tz = 0; tz < TIMEZONES.length; tz++) {
-        var option = el("option", "", TIMEZONES[tz][1]);
-        option.value = String(TIMEZONES[tz][0]);
-        if (TIMEZONES[tz][0] === clock.timezoneOffsetMinutes) { option.selected = true; }
-        timezoneSelect.appendChild(option);
-      }
-      var timeActions = el("div", "m-time-control__actions");
-      var applyTimeBtn = el("button", "m-time-control__btn", "应用时间");
-      applyTimeBtn.type = "button";
-      var liveTimeBtn = el("button", "m-time-control__btn", "回到实时");
-      liveTimeBtn.type = "button";
-      timeActions.appendChild(applyTimeBtn);
-      timeActions.appendChild(liveTimeBtn);
-      timePanel.appendChild(timeReadout);
-      timePanel.appendChild(sunReadout);
-      timePanel.appendChild(timeInput);
-      timePanel.appendChild(timezoneSelect);
-      timePanel.appendChild(timeActions);
-      host.appendChild(timePanel);
-
-      var twilightLayer = el("div", "m-day-night-layer");
-      twilightLayer.setAttribute("aria-hidden", "true");
-      $("app").insertBefore(twilightLayer, $("map-canvas"));
-
-      applyTimeBtn.addEventListener("click", applyManualClock);
-      timeInput.addEventListener("change", applyManualClock);
-      timezoneSelect.addEventListener("change", function () {
-        var c = Environment.getClock();
-        Environment.setClock({
-          manual: c.manual, dateMs: c.manual ? c.dateMs : null,
-          timezoneOffsetMinutes: Number(timezoneSelect.value),
-          timezoneLabel: timezoneSelect.options[timezoneSelect.selectedIndex].text
-        });
-        updateClockUI(true);
-      });
-      liveTimeBtn.addEventListener("click", function () {
-        Environment.setClock({
-          manual: false, timezoneOffsetMinutes: Number(timezoneSelect.value),
-          timezoneLabel: timezoneSelect.options[timezoneSelect.selectedIndex].text
-        });
-        updateClockUI(true);
-      });
-      updateClockUI(true);
-      clockTimer = window.setInterval(function () { updateClockUI(false); }, 1000);
-    }
-
-    /* ---- 比例尺（05 §6.6）：必须真实响应缩放，否则违反 P-2 ---- */
-    var scale = el("div", "m-scale");
-    scale.setAttribute("aria-hidden", "true");
-    var bar = el("div", "m-scale__bar");
-    for (var i = 0; i < 4; i++) { bar.appendChild(el("i", "m-scale__seg")); }
-    scaleLabel = el("div", "m-scale__label", "");
-    scale.appendChild(bar);
-    scale.appendChild(scaleLabel);
-    host.appendChild(scale);
-
-    /* ---- 图廓坐标（装饰性，锚定"这是一张地图"的认知；SCALE 行真实响应缩放）---- */
-    scaleTag = el("div", "m-graticule-tag", "");
-    host.appendChild(scaleTag);
-
-    /* ---- 页脚手写体签名（数据驱动：meta.signature）---- */
-    var sig = (site && site.meta && site.meta.signature) || "";
-    if (sig) {
-      var sign = el("div", "m-sign", sig);
-      host.appendChild(sign);
-    }
-
-    updateScaleReadout(Camera.getScale());
-  }
-
-  /* 比例尺刻度映射（05 §6.6）：scale = 1.0 时 96px = 500 m */
-  var SCALE_BASE_M = 500;
-
-  function updateScaleReadout(scale) {
-    if (scaleLabel) {
-      var meters = Math.round(SCALE_BASE_M / scale / 50) * 50;
-      scaleLabel.textContent = "0 — " + (meters >= 1000
-        ? (meters / 1000).toFixed(1) + " km"
-        : meters + " m");
-    }
-    if (scaleTag) {
-      /* 图廓上的比例分母同样随缩放变化，避免它退化成一张贴纸（P-2）*/
-      var denom = Math.round(24000 / scale / 100) * 100;
-      scaleTag.textContent = "34°16′N 108°56′E\nSCALE 1 : " + denom + "\nCONTOUR INTERVAL 10 M";
-    }
+  function startEnvironmentClock() {
+    if (!Environment || !Environment.getClock) return;
+    var twilightLayer = el("div", "m-day-night-layer");
+    twilightLayer.setAttribute("aria-hidden", "true");
+    $("app").insertBefore(twilightLayer, $("map-canvas"));
+    updateEnvironment(true);
+    clockTimer = window.setInterval(function () { updateEnvironment(false); }, 1000);
   }
 
   /* ══════════════════════════════════════════════════════════════════════════
-     8 —— 引导文案（数据驱动：hero.headline / subline / hint）
+     8 —— 左上角标题与横线
      ══════════════════════════════════════════════════════════════════════════ */
 
   function buildHero() {
@@ -552,10 +409,6 @@
 
     host.appendChild(el("div", "m-hero__rule"));
     host.appendChild(el("h1", "m-hero__title", hero.headline || TITLE));
-    if (hero.subline) { host.appendChild(el("p", "m-hero__sub", hero.subline)); }
-    /* 05 §10.3：reduced-motion 下 A-17 拖拽引导被移除，
-       由这行小字补偿，因此它在降级态下更要显示 */
-    if (hero.hint) { host.appendChild(el("p", "m-hero__hint", hero.hint)); }
   }
 
   /* ══════════════════════════════════════════════════════════════════════════
@@ -826,7 +679,6 @@
           (window.FieldRoom && window.FieldRoom.isOpen()) ||
           (window.RhythmPlayer && window.RhythmPlayer.isOpen()) ||
           (window.SpaceCity && window.SpaceCity.isOpen && window.SpaceCity.isOpen())) { return; }
-      if (e.target && e.target.closest && e.target.closest(".m-time-control")) { return; }
       var inOverlay = e.target && e.target.closest && e.target.closest("#overlay");
       var leftMap = window.innerWidth >= 768 ? e.clientX < window.innerWidth / 2 : !inOverlay;
       if (!leftMap) { return; }
@@ -914,7 +766,6 @@
      ══════════════════════════════════════════════════════════════════════════ */
 
   function boot() {
-    if (window.IntroScreen) { window.IntroScreen.start(); }
     /* --- 3.0 识别色注入必须最先，否则首帧会用到 tokens.css 的默认色 --- */
     applyFieldColors();
 
@@ -926,6 +777,7 @@
       layer: $("landmark-layer"),
       onResize: function (o) { if (cameraReady) { Camera.onResize(o); } }
     });
+    sceneInitialized = true;
 
     /* --- 3.2 地标解析（在镜头初始化之前，因为镜头需要地标点做边界约束）--- */
     landmarks = Lm.parse(site);
@@ -961,7 +813,7 @@
     /* --- 3.4 DOM --- */
     buildLandmarks();
     layoutLandmarks();
-    buildControls();
+    startEnvironmentClock();
     buildHero();
     syncWorld(Camera.getView());
 
@@ -1034,9 +886,31 @@
     return;
   }
 
+  function startIntroduction() {
+    configurePreviewClock();
+    // CPU preparation runs concurrently in a worker. GPU uploads are batched
+    // between typing callbacks, so both caches are warm before the text finishes.
+    if (Environment && Environment.getLight) { applyEnvironmentTheme(Environment.getLight()); }
+    var preparation = hasData && Engine.prepareTerrainData ? Engine.prepareTerrainData() : Promise.resolve(null);
+    preparation = preparation.then(function (cycle) {
+      if (!cycle || !window.TerrainOrbit || !window.TerrainOrbit.prepareFramesAsync) return cycle;
+      return window.TerrainOrbit.prepareFramesAsync(cycle.frames).then(function () { return cycle; });
+    });
+    function preparedBoot() {
+      preparation.then(function (cycle) {
+        if (cycle) Engine.adoptTerrainData(cycle);
+        boot();
+      });
+    }
+    if (window.IntroScreen) {
+      window.IntroScreen.start();
+      window.IntroScreen.whenComplete(preparedBoot);
+    } else { preparedBoot(); }
+  }
+
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
+    document.addEventListener("DOMContentLoaded", startIntroduction);
   } else {
-    boot();
+    startIntroduction();
   }
 })();
