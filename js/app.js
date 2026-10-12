@@ -751,8 +751,9 @@
 
   function currentFieldFromHash() {
     var match = HASH_RE.exec(window.location.hash || "");
+    if (!match) { return null; }
     var isField = site && site.fields && site.fields.some(function (field) { return field.id === match[1]; });
-    return match && (isField || match[1] === "echo") ? match[1] : null;
+    return (isField || match[1] === "echo") ? match[1] : null;
   }
 
   // Only resume a room saved by a refresh in this tab and at this exact URL.
