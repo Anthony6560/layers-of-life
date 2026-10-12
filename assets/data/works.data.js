@@ -113,7 +113,7 @@ window.WORKS_DATA = {
       "cover": "assets/media/rhythm/play-cover.svg",
       "images": [],
       "tags": ["电子乐", "弦乐", "钢琴"],
-      "media": { "type": "audio", "src": "play.mp3?v=20261008-corrected", "duration": 310.64815, "visualizer": "play" }
+      "media": { "type": "audio", "src": "assets/media/rhythm/play.mp3?v=20261012-media-path", "duration": 310.64815, "visualizer": "play" }
     },
     {
       "id": "field-defense-heatmap",

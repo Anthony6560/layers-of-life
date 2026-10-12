@@ -3,3 +3,14 @@ Thumbs.db
 desktop.ini
 *.tmp
 *.bak
+
+# Local tooling, browser profiles and intermediate GIS exports
+node_modules/
+artifacts/
+.cache/
+*.vrt
+*.aux.xml
+
+# Retired city basemaps; the current city view uses terrain geometry
+assets/basemaps/
+assets/data/nanshan.basemaps.js
