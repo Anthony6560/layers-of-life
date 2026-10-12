@@ -39,7 +39,7 @@
             90° 时地层板全部退化为零面积，留 2° 让「这是一叠板」始终可见
      角度的**唯一真相**在本模块，由 pushAngles() 推给投影层（map-engine），
      地标（landmarks.js）与地形因此共用同一套投影（风险 R-8）。 */
-  var YAW_HOME = -18, PITCH_HOME = 60;
+  var YAW_HOME = -18, PITCH_HOME = 52;
   var PITCH_MIN = 10, PITCH_MAX = 88;
   var YAW_PER_PX = 0.4, PITCH_PER_PX = 0.3;   /* §6 拖拽灵敏度：度 / 屏幕像素 */
 
@@ -53,6 +53,9 @@
      规则：正常情况下下限仍是 0.6（PRD 不变）；仅当 fit 所需缩放更小、
      即地形确实长大到装不下时，下限跟随下探，留 8% 余量。 */
   var fitFloor = Infinity;
+  /* 全景缩放仍按完整地形包围盒计算，但构图中心优先照顾五座主题山峰。 */
+  var OVERVIEW_FIELD_WEIGHT = 0.72;
+  var OVERVIEW_VERTICAL_BIAS = 0.045;
   /* 初始全景允许随旋转重新适配；用户主动平移/缩放后进入探索态。 */
   var overviewLocked = false;
 
@@ -342,11 +345,28 @@
        此时下探下限，而不是把边距裁掉（内容被切边比缩放越界更糟）。 */
     fitFloor = (s < minScale) ? s * 0.92 : Infinity;
 
-    return {
-      x: (b.x0 + b.x1) / 2,
-      y: (b.y0 + b.y1) / 2,
-      scale: clampScale(s)
-    };
+    var cx = (b.x0 + b.x1) / 2;
+    var cy = (b.y0 + b.y1) / 2;
+    var points = typeof pointsFn === "function" ? pointsFn() : [];
+    if (points && points.length >= 3) {
+      var px = 0, py = 0, count = 0;
+      for (var p = 0; p < points.length; p++) {
+        if (!points[p] || !isFinite(points[p].x) || !isFinite(points[p].y)) { continue; }
+        px += points[p].x;
+        py += points[p].y;
+        count++;
+      }
+      if (count >= 3) {
+        px /= count;
+        py /= count;
+        cx += (px - cx) * OVERVIEW_FIELD_WEIGHT;
+        cy += (py - cy) * OVERVIEW_FIELD_WEIGHT;
+      }
+    }
+    /* 山体高度会把主题峰顶推向画面上方，给全景中心留一点下移空间。 */
+    cy -= bh * OVERVIEW_VERTICAL_BIAS;
+
+    return { x: cx, y: cy, scale: clampScale(s) };
   }
 
   /**
